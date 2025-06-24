@@ -11,15 +11,13 @@ public final class TempceLib extends JavaPlugin {
     // Plugin startup logic
     instance = this;
     
-    getLogger().info("TempceLib has been enabled!");
-    getLogger().info("Message system initialized with translation support");
-    getLogger().info("Use /tempce message to test message system features");
+    getLogger().info("TempceLibが有効化されました！");
   }
 
   @Override
   public void onDisable() {
     // Plugin shutdown logic
-    getLogger().info("TempceLib has been disabled!");
+    getLogger().info("TempceLibが無効化されました！");
   }
 
   public static TempceLib getInstance() {

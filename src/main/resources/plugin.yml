@@ -8,7 +8,7 @@ description: Minecraftプラグイン開発支援ライブラリ
 commands:
   tempce:
     description: TempceLibのメイン コマンド
-    usage: /tempcelib <subcommand>
+    usage: /tempce <subcommand>
     aliases: [tcl]
     permission: tempcelib.use
     permission-message: "§cTempceLibを使用する権限がありません"
@@ -17,6 +17,3 @@ permissions:
   tempcelib.use:
     description: TempceLibの基本機能を使用
     default: true
-  tempcelib.admin:
-    description: TempceLibの管理機能を使用
-    default: op

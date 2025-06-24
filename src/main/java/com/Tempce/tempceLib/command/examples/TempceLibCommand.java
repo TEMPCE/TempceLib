@@ -4,17 +4,16 @@ import com.Tempce.tempceLib.command.annotations.Command;
 import com.Tempce.tempceLib.command.annotations.SubCommand;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 /**
  * TempceLibのメインコマンドのサンプル実装
  */
 @Command(
-    name = "tempcelib",
+    name = "tempce",
     permission = "tempcelib.use",
-    alias = {"tcl", "tempce"},
+    alias = {"tcl"},
     description = "TempceLibのメインコマンド",
-    usage = "/tempcelib <subcommand>"
+    usage = "/tempce <subcommand>"
 )
 public class TempceLibCommand {
     
@@ -32,22 +31,6 @@ public class TempceLibCommand {
     }
     
     @SubCommand(
-        name = "test",
-        alias = {"t"},
-        description = "テストコマンド",
-        usage = "test [message]",
-        timeout = 5
-    )
-    public void test(CommandSender sender, String[] args) {
-        if (args.length == 0) {
-            sender.sendMessage(ChatColor.AQUA + "テストコマンドが実行されました！");
-        } else {
-            String message = String.join(" ", args);
-            sender.sendMessage(ChatColor.AQUA + "テストメッセージ: " + ChatColor.WHITE + message);
-        }
-    }
-    
-    @SubCommand(
         name = "reload",
         permission = "tempcelib.admin",
         description = "設定をリロード",
@@ -58,21 +41,6 @@ public class TempceLibCommand {
     }
     
     @SubCommand(
-        name = "heal",
-        permission = "tempcelib.heal",
-        description = "プレイヤーを回復",
-        usage = "heal",
-        playerOnly = true
-    )
-    public void heal(CommandSender sender, String[] args) {
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            player.setHealth(player.getMaxHealth());
-            player.setFoodLevel(20);
-            player.sendMessage(ChatColor.GREEN + "体力が回復しました！");
-        }
-    }
-      @SubCommand(
         name = "stats",
         description = "コマンド統計を表示",
         usage = "stats"

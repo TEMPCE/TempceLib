@@ -181,7 +181,7 @@ public class CommandManager {
             SubCommandData helpSubCommand = new SubCommandData(
                 "help", // パス
                 "", // 権限なし
-                Arrays.asList("h", "?"), // エイリアス
+                Arrays.asList(), // エイリアスなし
                 0, // タイムアウトなし
                 "このコマンドのヘルプを表示",
                 "help [subcommand]",
@@ -192,9 +192,6 @@ public class CommandManager {
             
             // フルパスで登録
             subCommands.put("help", helpSubCommand);
-            // エイリアスも登録
-            subCommands.put("h", helpSubCommand);
-            subCommands.put("?", helpSubCommand);
             
         } catch (Exception e) {
             TempceLib.getInstance().getLogger().warning("自動ヘルプコマンドの作成に失敗しました: " + e.getMessage());

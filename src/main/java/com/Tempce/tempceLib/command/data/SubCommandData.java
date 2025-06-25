@@ -7,7 +7,7 @@ import java.util.List;
  * サブコマンドの情報を保持するクラス
  */
 public class SubCommandData {
-    private final String name;
+    private final String path;
     private final String permission;
     private final List<String> aliases;
     private final int timeout;
@@ -17,10 +17,10 @@ public class SubCommandData {
     private final Method method;
     private final Object instance;
     
-    public SubCommandData(String name, String permission, List<String> aliases, 
+    public SubCommandData(String path, String permission, List<String> aliases, 
                          int timeout, String description, String usage, 
                          boolean playerOnly, Method method, Object instance) {
-        this.name = name;
+        this.path = path;
         this.permission = permission;
         this.aliases = aliases;
         this.timeout = timeout;
@@ -31,8 +31,22 @@ public class SubCommandData {
         this.instance = instance;
     }
     
-    public String getName() {
-        return name;
+    public String getPath() {
+        return path;
+    }
+    
+    /**
+     * パスの最初の部分を取得（例: "test.test2" -> "test"）
+     */
+    public String getFirstLevelName() {
+        return path.split("\\.")[0];
+    }
+    
+    /**
+     * パスの全レベルを配列として取得（例: "test.test2" -> ["test", "test2"]）
+     */
+    public String[] getPathLevels() {
+        return path.split("\\.");
     }
     
     public String getPermission() {

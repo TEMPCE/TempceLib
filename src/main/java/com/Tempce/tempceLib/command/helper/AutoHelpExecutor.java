@@ -68,14 +68,14 @@ public class AutoHelpExecutor {
         // 権限のあるサブコマンドのみを表示
         subCommands.values().stream()
             .filter(subCmd -> subCmd.getPermission().isEmpty() || sender.hasPermission(subCmd.getPermission()))
-            .collect(Collectors.groupingBy(SubCommandData::getName)) // 重複を除去
+            .collect(Collectors.groupingBy(SubCommandData::getFirstLevelName)) // 重複を除去
             .values().stream()
             .map(list -> list.get(0)) // 各グループの最初の要素を取得
-            .sorted((a, b) -> a.getName().compareTo(b.getName()))
+            .sorted((a, b) -> a.getFirstLevelName().compareTo(b.getFirstLevelName()))
             .forEach(subCmd -> {
                 StringBuilder line = new StringBuilder();
                 line.append(ChatColor.GREEN).append("  /").append(commandName)
-                    .append(" ").append(subCmd.getName());
+                    .append(" ").append(subCmd.getFirstLevelName());
                 
                 if (!subCmd.getAliases().isEmpty()) {
                     line.append(ChatColor.GRAY).append(" (")
@@ -83,6 +83,11 @@ public class AutoHelpExecutor {
                 }
                 
                 line.append(ChatColor.WHITE).append(" - ").append(subCmd.getDescription());
+                
+                // 多階層の場合はパス全体を表示
+                if (!subCmd.getPath().equals(subCmd.getFirstLevelName())) {
+                    line.append(ChatColor.GRAY).append(" [パス: ").append(subCmd.getPath()).append("]");
+                }
                 
                 sender.sendMessage(line.toString());
             });
@@ -113,8 +118,8 @@ public class AutoHelpExecutor {
         
         String commandName = commandAnnotation.name();
         
-        sender.sendMessage(ChatColor.GOLD + "========== " + subCommand.getName().toUpperCase() + " ヘルプ ==========");
-        sender.sendMessage(ChatColor.YELLOW + "コマンド: " + ChatColor.WHITE + "/" + commandName + " " + subCommand.getName());
+        sender.sendMessage(ChatColor.GOLD + "========== " + subCommand.getFirstLevelName().toUpperCase() + " ヘルプ ==========");
+        sender.sendMessage(ChatColor.YELLOW + "コマンド: " + ChatColor.WHITE + "/" + commandName + " " + subCommand.getPath());
         sender.sendMessage(ChatColor.YELLOW + "説明: " + ChatColor.WHITE + subCommand.getDescription());
         
         if (!subCommand.getUsage().isEmpty()) {

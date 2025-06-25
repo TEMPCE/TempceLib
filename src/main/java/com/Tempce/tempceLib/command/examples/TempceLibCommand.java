@@ -18,7 +18,7 @@ import org.bukkit.command.CommandSender;
 public class TempceLibCommand {
     
     @SubCommand(
-        name = "info",
+        path = "info",
         description = "TempceLibの情報を表示",
         usage = "info"
     )
@@ -31,7 +31,7 @@ public class TempceLibCommand {
     }
     
     @SubCommand(
-        name = "reload",
+        path = "reload",
         permission = "tempcelib.admin",
         description = "設定をリロード",
         usage = "reload"
@@ -41,7 +41,7 @@ public class TempceLibCommand {
     }
     
     @SubCommand(
-        name = "stats",
+        path = "stats",
         description = "コマンド統計を表示",
         usage = "stats"
     )

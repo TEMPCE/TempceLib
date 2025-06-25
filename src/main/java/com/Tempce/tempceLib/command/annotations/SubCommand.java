@@ -14,9 +14,11 @@ import java.lang.annotation.Target;
 public @interface SubCommand {
     
     /**
-     * サブコマンド名（省略時はメソッド名を使用）
+     * サブコマンドのパス（省略時はメソッド名を使用）
+     * 単一レベル: "info", "stats"
+     * 多階層: "config.reload", "user.create.admin"
      */
-    String name() default "";
+    String path() default "";
     
     /**
      * 実行に必要な権限（省略時は権限チェックなし）

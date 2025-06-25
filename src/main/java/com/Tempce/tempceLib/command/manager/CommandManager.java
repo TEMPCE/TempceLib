@@ -90,10 +90,10 @@ public class CommandManager {
             if (method.isAnnotationPresent(SubCommand.class)) {
                 SubCommand subCommandAnnotation = method.getAnnotation(SubCommand.class);
                 
-                // サブコマンド名の決定
-                String subCommandName = subCommandAnnotation.name();
-                if (subCommandName.isEmpty()) {
-                    subCommandName = method.getName().toLowerCase();
+                // サブコマンドパスの決定
+                String subCommandPath = subCommandAnnotation.path();
+                if (subCommandPath.isEmpty()) {
+                    subCommandPath = method.getName().toLowerCase();
                 }
                 
                 // メソッドパラメータの検証
@@ -108,7 +108,7 @@ public class CommandManager {
                 method.setAccessible(true);
                 
                 SubCommandData subCommandData = new SubCommandData(
-                    subCommandName,
+                    subCommandPath,
                     subCommandAnnotation.permission(),
                     Arrays.asList(subCommandAnnotation.alias()),
                     subCommandAnnotation.timeout(),
@@ -119,10 +119,15 @@ public class CommandManager {
                     commandInstance
                 );
                 
-                subCommands.put(subCommandName, subCommandData);
-                  // エイリアスの登録
-                for (String alias : subCommandAnnotation.alias()) {
-                    subCommands.put(alias.toLowerCase(), subCommandData);
+                // フルパスで登録（重要：第1レベルのみではなく、完全なパスで登録）
+                subCommands.put(subCommandPath.toLowerCase(), subCommandData);
+                
+                // エイリアスの登録（第1レベルのみ対象）
+                String[] pathParts = subCommandPath.split("\\.");
+                if (pathParts.length == 1) {
+                    for (String alias : subCommandAnnotation.alias()) {
+                        subCommands.put(alias.toLowerCase(), subCommandData);
+                    }
                 }
             }
         }
@@ -161,7 +166,10 @@ public class CommandManager {
      */
     private void addAutoHelpSubCommand(Map<String, SubCommandData> subCommands, Object commandInstance, Command commandAnnotation) {
         // 既に"help"サブコマンドが存在する場合はスキップ
-        if (subCommands.containsKey("help")) {
+        boolean helpExists = subCommands.keySet().stream()
+            .anyMatch(key -> key.equals("help") || key.startsWith("help."));
+        
+        if (helpExists) {
             return;
         }
         
@@ -170,9 +178,9 @@ public class CommandManager {
             Method helpMethod = createHelpMethod(commandAnnotation, subCommands);
             
             SubCommandData helpSubCommand = new SubCommandData(
-                "help",
+                "help", // パス
                 "", // 権限なし
-                    List.of(""), // エイリアス
+                Arrays.asList("h", "?"), // エイリアス
                 0, // タイムアウトなし
                 "このコマンドのヘルプを表示",
                 "help [subcommand]",
@@ -181,7 +189,11 @@ public class CommandManager {
                 new AutoHelpExecutor(commandAnnotation, subCommands)
             );
             
+            // フルパスで登録
             subCommands.put("help", helpSubCommand);
+            // エイリアスも登録
+            subCommands.put("h", helpSubCommand);
+            subCommands.put("?", helpSubCommand);
             
         } catch (Exception e) {
             TempceLib.getInstance().getLogger().warning("自動ヘルプコマンドの作成に失敗しました: " + e.getMessage());
@@ -279,18 +291,19 @@ public class CommandManager {
         if (!commandData.getPermission().isEmpty() && !sender.hasPermission(commandData.getPermission())) {
             return completions;
         }        if (args.length == 1) {
-            // サブコマンド名の補完
+            // サブコマンド名の補完（第1レベル）
             String input = args[0].toLowerCase();
             Set<String> addedCompletions = new HashSet<>();
             
             for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
                 if (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission())) {
-                    // メインの名前を追加
-                    if (subCommandData.getName().startsWith(input) && !addedCompletions.contains(subCommandData.getName())) {
-                        completions.add(subCommandData.getName());
-                        addedCompletions.add(subCommandData.getName());
+                    // 第1レベルの名前を取得
+                    String firstLevel = subCommandData.getFirstLevelName();
+                    if (firstLevel.startsWith(input) && !addedCompletions.contains(firstLevel)) {
+                        completions.add(firstLevel);
+                        addedCompletions.add(firstLevel);
                     }
-                    // エイリアスを追加
+                    // エイリアスも追加
                     for (String alias : subCommandData.getAliases()) {
                         if (alias.startsWith(input) && !addedCompletions.contains(alias)) {
                             completions.add(alias);
@@ -299,21 +312,9 @@ public class CommandManager {
                     }
                 }
             }
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("help")) {
-            // helpコマンドの補完 - 利用可能なサブコマンド名を提案
-            String input = args[1].toLowerCase();
-            Set<String> addedCompletions = new HashSet<>();
-            
-            for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
-                if (!subCommandData.getName().equals("help") && 
-                    (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission()))) {
-                    
-                    if (subCommandData.getName().startsWith(input) && !addedCompletions.contains(subCommandData.getName())) {
-                        completions.add(subCommandData.getName());
-                        addedCompletions.add(subCommandData.getName());
-                    }
-                }
-            }
+        } else if (args.length >= 2) {
+            // 多階層サブコマンドの補完
+            handleMultiLevelTabCompletion(sender, commandData, args, completions);
         }
         
         Collections.sort(completions);
@@ -355,8 +356,9 @@ public class CommandManager {
                 String input = args[1].toLowerCase();
                 for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
                     if (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission())) {
-                        if (subCommandData.getName().startsWith(input)) {
-                            completions.add(subCommandData.getName());
+                        String firstLevel = subCommandData.getFirstLevelName();
+                        if (firstLevel.startsWith(input)) {
+                            completions.add(firstLevel);
                         }
                         for (String alias : subCommandData.getAliases()) {
                             if (alias.startsWith(input)) {
@@ -388,5 +390,59 @@ public class CommandManager {
         return commands.values().stream()
             .mapToInt(cmd -> cmd.getSubCommands().size())
             .sum();
+    }
+    
+    /**
+     * 多階層サブコマンドのタブ補完を処理する
+     */
+    private void handleMultiLevelTabCompletion(CommandSender sender, CommandData commandData, String[] args, List<String> completions) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("help")) {
+            // helpコマンドの補完 - 利用可能なサブコマンドのパスを提案
+            String input = args[1].toLowerCase();
+            Set<String> addedCompletions = new HashSet<>();
+            
+            for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
+                if (!subCommandData.getFirstLevelName().equals("help") && 
+                    (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission()))) {
+                    
+                    String firstLevel = subCommandData.getFirstLevelName();
+                    if (firstLevel.startsWith(input) && !addedCompletions.contains(firstLevel)) {
+                        completions.add(firstLevel);
+                        addedCompletions.add(firstLevel);
+                    }
+                }
+            }
+            return;
+        }
+        
+        // 現在の引数パスを構築して次のレベルを探す
+        String input = args[args.length - 1].toLowerCase();
+        Set<String> addedCompletions = new HashSet<>();
+        
+        // 現在のパスレベルの次のレベルを探す
+        for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
+            if (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission())) {
+                String[] pathLevels = subCommandData.getPathLevels();
+                
+                // 現在のパスレベルと一致し、次のレベルが存在するかチェック
+                if (pathLevels.length > args.length - 1) {
+                    boolean pathMatches = true;
+                    for (int i = 0; i < args.length - 1; i++) {
+                        if (!pathLevels[i].equalsIgnoreCase(args[i])) {
+                            pathMatches = false;
+                            break;
+                        }
+                    }
+                    
+                    if (pathMatches) {
+                        String nextLevel = pathLevels[args.length - 1];
+                        if (nextLevel.toLowerCase().startsWith(input) && !addedCompletions.contains(nextLevel)) {
+                            completions.add(nextLevel);
+                            addedCompletions.add(nextLevel);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

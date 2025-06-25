@@ -9,11 +9,11 @@ import org.bukkit.command.CommandSender;
  * TempceLibのメインコマンドのサンプル実装
  */
 @Command(
-    name = "tempce",
+    name = "tempcelib",
     permission = "tempcelib.use",
     alias = {"tcl"},
     description = "TempceLibのメインコマンド",
-    usage = "/tempce <subcommand>"
+    usage = "/tempcelib <subcommand>"
 )
 public class TempceLibCommand {
     

@@ -27,12 +27,7 @@ public class TempceCommandExecutor implements CommandExecutor {
     
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) {
-            sendHelpMessage(sender);
-            return true;
-        }
-        
-        String commandName = args[0].toLowerCase();
+        String commandName = command.getName().toLowerCase();
         CommandData commandData = commandManager.getCommand(commandName);
         
         if (commandData == null) {
@@ -60,13 +55,13 @@ public class TempceCommandExecutor implements CommandExecutor {
             cooldowns.put(cooldownKey, System.currentTimeMillis());
         }
         
-        if (args.length == 1) {
+        if (args.length == 0) {
             // サブコマンドがない場合、ヘルプを表示
             sendCommandHelp(sender, commandData);
             return true;
         }
         
-        String subCommandName = args[1].toLowerCase();
+        String subCommandName = args[0].toLowerCase();
         SubCommandData subCommandData = commandData.getSubCommands().get(subCommandName);
         
         if (subCommandData == null) {
@@ -113,8 +108,8 @@ public class TempceCommandExecutor implements CommandExecutor {
         
         // サブコマンド実行
         try {
-            String[] subArgs = new String[args.length - 2];
-            System.arraycopy(args, 2, subArgs, 0, subArgs.length);
+            String[] subArgs = new String[args.length - 1];
+            System.arraycopy(args, 1, subArgs, 0, subArgs.length);
             
             subCommandData.getMethod().invoke(subCommandData.getInstance(), sender, subArgs);
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -123,15 +118,6 @@ public class TempceCommandExecutor implements CommandExecutor {
         }
         
         return true;
-    }
-    
-    private void sendHelpMessage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GREEN + "========== TempceLib Commands ==========");
-        for (CommandData commandData : commandManager.getCommands().values()) {
-            if (commandData.getPermission().isEmpty() || sender.hasPermission(commandData.getPermission())) {
-                sender.sendMessage(ChatColor.YELLOW + "/" + commandData.getName() + " - " + commandData.getDescription());
-            }
-        }
     }
     
     private void sendCommandHelp(CommandSender sender, CommandData commandData) {

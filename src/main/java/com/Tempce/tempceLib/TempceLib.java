@@ -1,9 +1,7 @@
 package com.Tempce.tempceLib;
 
-import com.Tempce.tempceLib.command.completer.TempceTabCompleter;
-import com.Tempce.tempceLib.command.executor.TempceCommandExecutor;
+import com.Tempce.tempceLib.command.examples.TempceLibCommand;
 import com.Tempce.tempceLib.command.manager.CommandManager;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class TempceLib extends JavaPlugin {
@@ -39,14 +37,7 @@ public final class TempceLib extends JavaPlugin {
     commandManager = new CommandManager();
     
     // plugin.ymlで定義されたコマンドにエグゼキューターとタブコンプリーターを設定
-    PluginCommand tempceCommand = getCommand("tempce");
-    if (tempceCommand != null) {
-      TempceCommandExecutor executor = new TempceCommandExecutor(commandManager);
-      TempceTabCompleter completer = new TempceTabCompleter(commandManager);
-      
-      tempceCommand.setExecutor(executor);
-      tempceCommand.setTabCompleter(completer);
-    }
+    commandManager.registerCommand(TempceLibCommand.class);
     
     getLogger().info("コマンドシステムを初期化しました (登録コマンド: " + 
         commandManager.getCommandCount() + "個, サブコマンド: " + 

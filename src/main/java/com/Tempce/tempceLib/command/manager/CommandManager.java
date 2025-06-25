@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * コマンドシステムの管理クラス
  */
 public class CommandManager {
-      private final Map<String, CommandData> commands = new ConcurrentHashMap<>();
+    private final Map<String, CommandData> commands = new ConcurrentHashMap<>();
     private final Map<String, String> aliases = new ConcurrentHashMap<>();
     private CommandMap commandMap;
     
@@ -155,7 +155,8 @@ public class CommandManager {
         // エイリアスの登録
         for (String alias : commandAnnotation.alias()) {
             aliases.put(alias.toLowerCase(), commandName);
-        }        TempceLib.getInstance().getLogger().info("コマンド '" + commandName + "' を登録しました (サブコマンド: " + subCommands.size() + "個)");
+        }
+        TempceLib.getInstance().getLogger().info("コマンド '" + commandName + "' を登録しました (サブコマンド: " + subCommands.size() + "個)");
     }
     
     /**
@@ -271,7 +272,8 @@ public class CommandManager {
     public Map<String, CommandData> getCommands() {
         return new HashMap<>(commands);
     }
-      /**
+    
+    /**
      * タブ補完の候補を取得する
      * @param sender コマンド送信者
      * @param commandName 実行されたコマンド名
@@ -315,59 +317,6 @@ public class CommandManager {
         } else if (args.length >= 2) {
             // 多階層サブコマンドの補完
             handleMultiLevelTabCompletion(sender, commandData, args, completions);
-        }
-        
-        Collections.sort(completions);
-        return completions;
-    }
-    
-    /**
-     * タブ補完の候補を取得する（旧形式、互換性のため残す）
-     * @param sender コマンド送信者
-     * @param args 引数
-     * @return 補完候補のリスト
-     * @deprecated getTabCompletions(CommandSender, String, String[])を使用してください
-     */
-    @Deprecated
-    public List<String> getTabCompletions(CommandSender sender, String[] args) {
-        List<String> completions = new ArrayList<>();
-        
-        if (args.length == 1) {
-            // コマンド名の補完
-            String input = args[0].toLowerCase();
-            for (CommandData commandData : commands.values()) {
-                if (commandData.getPermission().isEmpty() || sender.hasPermission(commandData.getPermission())) {
-                    if (commandData.getName().startsWith(input)) {
-                        completions.add(commandData.getName());
-                    }
-                    for (String alias : commandData.getAliases()) {
-                        if (alias.startsWith(input)) {
-                            completions.add(alias);
-                        }
-                    }
-                }
-            }
-        } else if (args.length == 2) {
-            // サブコマンド名の補完
-            CommandData commandData = getCommand(args[0]);
-            if (commandData != null && 
-                (commandData.getPermission().isEmpty() || sender.hasPermission(commandData.getPermission()))) {
-                
-                String input = args[1].toLowerCase();
-                for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
-                    if (subCommandData.getPermission().isEmpty() || sender.hasPermission(subCommandData.getPermission())) {
-                        String firstLevel = subCommandData.getFirstLevelName();
-                        if (firstLevel.startsWith(input)) {
-                            completions.add(firstLevel);
-                        }
-                        for (String alias : subCommandData.getAliases()) {
-                            if (alias.startsWith(input)) {
-                                completions.add(alias);
-                            }
-                        }
-                    }
-                }
-            }
         }
         
         Collections.sort(completions);

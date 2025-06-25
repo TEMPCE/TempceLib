@@ -17,7 +17,8 @@ public class TempceTabCompleter implements TabCompleter {
     public TempceTabCompleter(CommandManager commandManager) {
         this.commandManager = commandManager;
     }
-      @Override
+
+    @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         return commandManager.getTabCompletions(sender, command.getName(), args);
     }

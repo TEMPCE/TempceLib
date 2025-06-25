@@ -4,19 +4,3 @@ main: com.Tempce.tempceLib.TempceLib
 api-version: '1.20'
 author: Tempce
 description: Minecraftプラグイン開発支援ライブラリ
-
-commands:
-  tempce:
-    description: TempceLibのメイン コマンド
-    usage: /tempcelib <subcommand>
-    aliases: [tcl]
-    permission: tempcelib.use
-    permission-message: "§cTempceLibを使用する権限がありません"
-
-permissions:
-  tempcelib.use:
-    description: TempceLibの基本機能を使用
-    default: true
-  tempcelib.admin:
-    description: TempceLibの管理機能を使用
-    default: op

@@ -31,6 +31,24 @@ public class TempceGUICommand {
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui confirmation" + ChatColor.WHITE + " - 確認ダイアログGUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui custom" + ChatColor.WHITE + " - カスタムメニューGUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui paginated" + ChatColor.WHITE + " - ページネーションGUIのテスト");
+        sender.sendMessage(ChatColor.YELLOW + "/tempce-gui debug <on|off>" + ChatColor.WHITE + " - デバッグモードの切り替え");
+    }
+    
+    @SubCommand(path = "debug", description = "デバッグモードの切り替え")
+    public void debug(CommandSender sender, String[] args) {
+        if (args.length < 1) {
+            sender.sendMessage(ChatColor.RED + "使用法: /tempce-gui debug <on|off>");
+            return;
+        }
+        
+        boolean enable = args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("true");
+        GUIManager.getInstance().setDebugMode(enable);
+        
+        if (enable) {
+            sender.sendMessage(ChatColor.GREEN + "GUIデバッグモードを有効にしました。");
+        } else {
+            sender.sendMessage(ChatColor.YELLOW + "GUIデバッグモードを無効にしました。");
+        }
     }
     
     @SubCommand(path = "commands", description = "コマンド自動GUI化を開く")

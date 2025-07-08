@@ -11,6 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -32,6 +33,7 @@ public class GUIManager implements GUIAPI, Listener {
     private final Map<UUID, Integer> currentPages = new ConcurrentHashMap<>();
     private final Map<UUID, List<GUIItemData>> paginatedItems = new ConcurrentHashMap<>();
     private final Map<UUID, Consumer<GUIItemData>> paginatedCallbacks = new ConcurrentHashMap<>();
+    private boolean debugMode = false; // デバッグモード制御
     
     /**
      * GUIManagerのシングルトンインスタンスを取得
@@ -49,6 +51,24 @@ public class GUIManager implements GUIAPI, Listener {
      */
     public void initialize() {
         Bukkit.getPluginManager().registerEvents(this, TempceLib.getInstance());
+    }
+    
+    /**
+     * デバッグモードを設定
+     * @param debug デバッグモード
+     */
+    public void setDebugMode(boolean debug) {
+        this.debugMode = debug;
+    }
+    
+    /**
+     * デバッグログを出力
+     * @param message メッセージ
+     */
+    private void debugLog(String message) {
+        if (debugMode) {
+            TempceLib.getInstance().getLogger().info("[GUI DEBUG] " + message);
+        }
     }
     
     @Override
@@ -133,6 +153,15 @@ public class GUIManager implements GUIAPI, Listener {
     
     @Override
     public void createCustomMenuGUI(Player player, GUIMenuData menuData) {
+        UUID playerId = player.getUniqueId();
+        
+        // 既存のGUIを閉じる
+        if (openGUIs.containsKey(playerId)) {
+            player.closeInventory();
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+        }
+        
         Inventory inventory = Bukkit.createInventory(null, menuData.getSize(), menuData.getTitle());
         
         // Fill itemがある場合は全スロットを埋める
@@ -143,20 +172,26 @@ public class GUIManager implements GUIAPI, Listener {
         }
         
         // アイテムを配置
+        int itemCount = 0;
         for (GUIItemData itemData : menuData.getItems()) {
-            if (itemData.getSlot() < menuData.getSize()) {
+            if (itemData.getSlot() >= 0 && itemData.getSlot() < menuData.getSize()) {
                 // 権限チェック
                 if (!itemData.getPermission().isEmpty() && !hasGUIPermission(player, itemData.getPermission())) {
                     continue;
                 }
                 inventory.setItem(itemData.getSlot(), itemData.getItemStack());
+                itemCount++;
             }
         }
         
-        UUID playerId = player.getUniqueId();
+        // データを保存
         openGUIs.put(playerId, inventory);
         guiData.put(playerId, menuData);
         
+        debugLog("カスタムGUI作成: プレイヤー=" + player.getName() + 
+                ", タイトル=" + menuData.getTitle() + ", アイテム数=" + itemCount + "/" + menuData.getItems().size());
+        
+        // インベントリを開く
         player.openInventory(inventory);
     }
     
@@ -284,13 +319,14 @@ public class GUIManager implements GUIAPI, Listener {
         
         List<GUIItemData> pageItems = new ArrayList<>();
         
-        // ページ内のアイテムを追加
+        // ページ内のアイテムを追加（スロット0から開始）
         for (int i = startIndex; i < endIndex; i++) {
             GUIItemData originalItem = allItems.get(i);
             int newSlot = i - startIndex;
+            Consumer<GUIItemData> clickAction = paginatedCallbacks.getOrDefault(playerId, originalItem.getClickAction());
+            
             pageItems.add(new GUIItemData(originalItem.getItemStack(), newSlot, 
-                    paginatedCallbacks.getOrDefault(playerId, originalItem.getClickAction()), 
-                    originalItem.getPermission(), originalItem.isEnabled()));
+                    clickAction, originalItem.getPermission(), originalItem.isEnabled()));
         }
         
         // ナビゲーションボタンを追加
@@ -318,6 +354,10 @@ public class GUIManager implements GUIAPI, Listener {
         
         String pageTitle = title + " (" + (page + 1) + "/" + totalPages + ")";
         GUIMenuData menuData = new GUIMenuData(pageTitle, 54, pageItems);
+        
+        debugLog("ページネーションGUI作成: ページ=" + (page + 1) + "/" + totalPages + 
+                ", アイテム数=" + pageItems.size());
+        
         createCustomMenuGUI(player, menuData);
     }
     
@@ -356,40 +396,76 @@ public class GUIManager implements GUIAPI, Listener {
         return item;
     }
     
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
         Player player = (Player) event.getWhoClicked();
         UUID playerId = player.getUniqueId();
         
+        // 管理対象のGUIかチェック
         if (!openGUIs.containsKey(playerId)) return;
         
+        Inventory openInventory = openGUIs.get(playerId);
+        
+        // クリックされたインベントリが管理対象のGUIかチェック
+        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(openInventory)) {
+            // プレイヤーインベントリのクリックの場合
+            GUIMenuData menuData = guiData.get(playerId);
+            if (menuData == null || !menuData.isAllowPlayerInventoryClick()) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+        
+        // GUIインベントリのクリックの場合は必ずキャンセル
         event.setCancelled(true);
         
         GUIMenuData menuData = guiData.get(playerId);
-        if (menuData == null) return;
-        
-        // プレイヤーインベントリのクリックが許可されていない場合はキャンセル
-        if (!menuData.isAllowPlayerInventoryClick() && event.getClickedInventory() != event.getView().getTopInventory()) {
+        if (menuData == null) {
+            debugLog("GUIデータが見つかりません: " + playerId);
             return;
         }
         
         int slot = event.getSlot();
+        
+        debugLog("GUI クリック検出: プレイヤー=" + player.getName() + 
+                ", スロット=" + slot + ", アイテム数=" + menuData.getItems().size());
+        
+        // アイテムクリック処理
         for (GUIItemData itemData : menuData.getItems()) {
-            if (itemData.getSlot() == slot && itemData.getClickAction() != null) {
+            if (itemData.getSlot() == slot) {
+                debugLog("アイテムが見つかりました: スロット=" + slot);
+                
                 // 権限チェック
                 if (!itemData.getPermission().isEmpty() && !hasGUIPermission(player, itemData.getPermission())) {
                     player.sendMessage(ChatColor.RED + "このアイテムを使用する権限がありません。");
                     return;
                 }
                 
-                if (itemData.isEnabled()) {
-                    itemData.getClickAction().accept(itemData);
+                // 有効性チェック
+                if (!itemData.isEnabled()) {
+                    debugLog("アイテムが無効です: スロット=" + slot);
+                    return;
                 }
-                break;
+                
+                // クリックアクション実行
+                if (itemData.getClickAction() != null) {
+                    debugLog("アクションを実行します: スロット=" + slot);
+                    try {
+                        itemData.getClickAction().accept(itemData);
+                    } catch (Exception e) {
+                        TempceLib.getInstance().getLogger().severe("GUIアクション実行中にエラーが発生しました: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    debugLog("アクションが設定されていません: スロット=" + slot);
+                }
+                return;
             }
         }
+        
+        debugLog("該当するアイテムが見つかりませんでした: スロット=" + slot);
     }
     
     @EventHandler
@@ -399,8 +475,15 @@ public class GUIManager implements GUIAPI, Listener {
         Player player = (Player) event.getPlayer();
         UUID playerId = player.getUniqueId();
         
-        // ページネーション関連のデータは保持して、GUIが再開できるようにする
-        openGUIs.remove(playerId);
-        guiData.remove(playerId);
+        // 自動でGUIを閉じる場合のみデータを削除
+        if (openGUIs.containsKey(playerId)) {
+            debugLog("GUI自動クローズ: プレイヤー=" + player.getName());
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            // ページネーション関連のデータは保持しない（メモリリーク防止）
+            currentPages.remove(playerId);
+            paginatedItems.remove(playerId);
+            paginatedCallbacks.remove(playerId);
+        }
     }
 }

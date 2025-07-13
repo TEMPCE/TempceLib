@@ -27,11 +27,15 @@ public class TempceGUICommand {
         sender.sendMessage(ChatColor.GREEN + "=== TempceLib GUI機能 ===");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui commands" + ChatColor.WHITE + " - コマンド自動GUI化を開く");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui item-selection" + ChatColor.WHITE + " - アイテム選択GUIのテスト");
-        sender.sendMessage(ChatColor.YELLOW + "/tempce-gui number-selection" + ChatColor.WHITE + " - 数値選択GUIのテスト");
+        sender.sendMessage(ChatColor.YELLOW + "/tempce-gui number-selection [min] [max] [default]" + ChatColor.WHITE + " - 数値選択GUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui confirmation" + ChatColor.WHITE + " - 確認ダイアログGUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui custom" + ChatColor.WHITE + " - カスタムメニューGUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui paginated" + ChatColor.WHITE + " - ページネーションGUIのテスト");
         sender.sendMessage(ChatColor.YELLOW + "/tempce-gui debug <on|off>" + ChatColor.WHITE + " - デバッグモードの切り替え");
+        sender.sendMessage(ChatColor.YELLOW + "/tempce-gui number-test-large" + ChatColor.WHITE + " - 大きな範囲での数値選択テスト");
+        sender.sendMessage(ChatColor.YELLOW + "/tempce-gui number-test-negative" + ChatColor.WHITE + " - 負の数を含む数値選択テスト");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.GRAY + "例: /tempce-gui number-selection 0 100 50");
     }
     
     @SubCommand(path = "debug", description = "デバッグモードの切り替え")
@@ -93,7 +97,48 @@ public class TempceGUICommand {
         }
         
         Player player = (Player) sender;
-        GUIManager.getInstance().createNumberSelectionGUI(player, "数値を選択してください", 1, 10, 5, (selectedNumber) -> {
+        
+        // 引数で範囲を指定できるようにする
+        int min = -128, max = 128, defaultValue = 0;
+        
+        if (args.length >= 1) {
+            try {
+                min = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(ChatColor.RED + "最小値は数値で指定してください。");
+                return;
+            }
+        }
+        
+        if (args.length >= 2) {
+            try {
+                max = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(ChatColor.RED + "最大値は数値で指定してください。");
+                return;
+            }
+        }
+        
+        if (args.length >= 3) {
+            try {
+                defaultValue = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(ChatColor.RED + "デフォルト値は数値で指定してください。");
+                return;
+            }
+        }
+        
+        if (min >= max) {
+            player.sendMessage(ChatColor.RED + "最小値は最大値より小さくなければなりません。");
+            return;
+        }
+        
+        // デフォルト値を範囲内に収める
+        defaultValue = Math.max(min, Math.min(max, defaultValue));
+        
+        player.sendMessage(ChatColor.GRAY + "数値選択GUI: 範囲=" + min + "~" + max + ", デフォルト=" + defaultValue);
+        
+        GUIManager.getInstance().createNumberSelectionGUI(player, "数値を選択してください", min, max, defaultValue, (selectedNumber) -> {
             player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber);
         });
     }
@@ -182,6 +227,32 @@ public class TempceGUICommand {
         GUIManager.getInstance().createPaginatedGUI(player, "ページネーションテスト", items, 28, null);
     }
     
+    @SubCommand(path = "number-test-large", description = "大きな範囲での数値選択GUIのテスト")
+    public void numberTestLarge(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+        
+        Player player = (Player) sender;
+        GUIManager.getInstance().createNumberSelectionGUI(player, "大きな数値を選択", 0, 10000, 1000, (selectedNumber) -> {
+            player.sendMessage(ChatColor.GREEN + "選択された大きな数値: " + selectedNumber);
+        });
+    }
+    
+    @SubCommand(path = "number-test-negative", description = "負の数を含む数値選択GUIのテスト")
+    public void numberTestNegative(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+        
+        Player player = (Player) sender;
+        GUIManager.getInstance().createNumberSelectionGUI(player, "負の数を含む範囲", -1000, 1000, 0, (selectedNumber) -> {
+            player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber);
+        });
+    }
+
     /**
      * アイテムを作成するヘルパーメソッド
      */

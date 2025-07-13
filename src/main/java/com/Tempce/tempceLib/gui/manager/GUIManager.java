@@ -86,44 +86,160 @@ public class GUIManager implements GUIAPI, Listener {
     
     @Override
     public void createNumberSelectionGUI(Player player, String title, int min, int max, int defaultValue, Consumer<Integer> onSelect) {
+        UUID playerId = player.getUniqueId();
+        
+        // ページネーション関連データを一時保存（数字選択GUIはページネーションをクリアすべきではない）
+        Integer savedPage = currentPages.get(playerId);
+        List<GUIItemData> savedItems = paginatedItems.get(playerId);
+        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        
         List<GUIItemData> guiItems = new ArrayList<>();
         int currentValue = Math.max(min, Math.min(max, defaultValue));
         
-        // 数値表示アイテム
-        ItemStack displayItem = createItem(Material.PAPER, ChatColor.GREEN + "現在の値: " + currentValue, 
-                Arrays.asList(ChatColor.GRAY + "範囲: " + min + " - " + max));
-        guiItems.add(new GUIItemData(displayItem, 4, null));
+        // 1行目のボタン配置: [最小] [-10] [-5] [-1] [INFO] [+1] [+5] [+10] [最大]
         
-        // 減少ボタン
+        // 最小値ボタン（スロット0）
+        if (currentValue != min) {
+            ItemStack minItem = createItem(Material.BEDROCK, ChatColor.DARK_RED + "最小値", 
+                    Arrays.asList(ChatColor.GRAY + "最小値 " + min + " に設定"));
+            guiItems.add(new GUIItemData(minItem, 0, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, min, onSelect)));
+        }
+        
+        // -10 ボタン（スロット1）
+        if (currentValue - 10 >= min) {
+            ItemStack decrease10Item = createItem(Material.PURPLE_CONCRETE, ChatColor.DARK_PURPLE + "-10", 
+                    Arrays.asList(ChatColor.GRAY + "10減らす"));
+            guiItems.add(new GUIItemData(decrease10Item, 1, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 10), onSelect)));
+        }
+        
+        // -5 ボタン（スロット2）
+        if (currentValue - 5 >= min) {
+            ItemStack decrease5Item = createItem(Material.ORANGE_CONCRETE, ChatColor.GOLD + "-5", 
+                    Arrays.asList(ChatColor.GRAY + "5減らす"));
+            guiItems.add(new GUIItemData(decrease5Item, 2, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 5), onSelect)));
+        }
+        
+        // -1 ボタン（スロット3）
         if (currentValue > min) {
             ItemStack decreaseItem = createItem(Material.RED_WOOL, ChatColor.RED + "-1", 
-                    Arrays.asList(ChatColor.GRAY + "クリックして値を減らす"));
+                    Arrays.asList(ChatColor.GRAY + "1減らす"));
             guiItems.add(new GUIItemData(decreaseItem, 3, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, currentValue - 1, onSelect)));
         }
         
-        // 増加ボタン
+        // 数値表示アイテム（スロット4）
+        ItemStack displayItem = createItem(Material.PAPER, ChatColor.GREEN + "現在の値: " + currentValue, 
+                Arrays.asList(
+                    ChatColor.GRAY + "範囲: " + min + " - " + max,
+                    ChatColor.GRAY + "左右のボタンで調整してください"
+                ));
+        guiItems.add(new GUIItemData(displayItem, 4, null));
+        
+        // +1 ボタン（スロット5）
         if (currentValue < max) {
             ItemStack increaseItem = createItem(Material.LIME_WOOL, ChatColor.GREEN + "+1", 
-                    Arrays.asList(ChatColor.GRAY + "クリックして値を増やす"));
+                    Arrays.asList(ChatColor.GRAY + "1増やす"));
             guiItems.add(new GUIItemData(increaseItem, 5, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, currentValue + 1, onSelect)));
         }
         
-        // 確定ボタン
+        // +5 ボタン（スロット6）
+        if (currentValue + 5 <= max) {
+            ItemStack increase5Item = createItem(Material.LIGHT_BLUE_CONCRETE, ChatColor.AQUA + "+5", 
+                    Arrays.asList(ChatColor.GRAY + "5増やす"));
+            guiItems.add(new GUIItemData(increase5Item, 6, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 5), onSelect)));
+        }
+        
+        // +10 ボタン（スロット7）
+        if (currentValue + 10 <= max) {
+            ItemStack increase10Item = createItem(Material.LIME_CONCRETE, ChatColor.GREEN + "+10", 
+                    Arrays.asList(ChatColor.GRAY + "10増やす"));
+            guiItems.add(new GUIItemData(increase10Item, 7, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 10), onSelect)));
+        }
+        
+        // 最大値ボタン（スロット8）
+        if (currentValue != max) {
+            ItemStack maxItem = createItem(Material.BEACON, ChatColor.YELLOW + "最大値", 
+                    Arrays.asList(ChatColor.GRAY + "最大値 " + max + " に設定"));
+            guiItems.add(new GUIItemData(maxItem, 8, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, max, onSelect)));
+        }
+        
+        // 2行目のボタン配置: [ ] [ ] [リセット] [ ] [ ] [確定] [キャンセル] [ ] [ ]
+        
+        // リセットボタン（スロット11 = 2行目の3個目）
+        int originalDefault = Math.max(min, Math.min(max, defaultValue));
+        if (currentValue != originalDefault) {
+            ItemStack resetItem = createItem(Material.CLOCK, ChatColor.BLUE + "リセット", 
+                    Arrays.asList(ChatColor.GRAY + "デフォルト値 " + originalDefault + " に戻す"));
+            guiItems.add(new GUIItemData(resetItem, 11, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, originalDefault, onSelect)));
+        }
+        
+        // 確定ボタン（スロット13 = 2行目の真ん中）
         ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "確定", 
                 Arrays.asList(ChatColor.GRAY + "この値で決定する"));
-        guiItems.add(new GUIItemData(confirmItem, 8, (guiItemData) -> {
-            closeGUI(player);
+        guiItems.add(new GUIItemData(confirmItem, 13, (guiItemData) -> {
+            // ページネーションデータを復元
+            if (savedPage != null && savedItems != null) {
+                currentPages.put(playerId, savedPage);
+                paginatedItems.put(playerId, savedItems);
+                if (savedCallback != null) {
+                    paginatedCallbacks.put(playerId, savedCallback);
+                }
+            }
+            
+            // GUI関連データを削除（ページネーションデータは保持）
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            
+            // インベントリを閉じてからコールバック実行
+            player.closeInventory();
             onSelect.accept(currentValue);
         }));
         
-        GUIMenuData menuData = new GUIMenuData(title, 9, guiItems);
+        // キャンセルボタン（スロット14 = 2行目の6つ目）
+        ItemStack cancelItem = createItem(Material.BARRIER, ChatColor.RED + "キャンセル", 
+                Arrays.asList(ChatColor.GRAY + "変更をキャンセル"));
+        guiItems.add(new GUIItemData(cancelItem, 14, (guiItemData) -> {
+            // ページネーションデータを復元
+            if (savedPage != null && savedItems != null) {
+                currentPages.put(playerId, savedPage);
+                paginatedItems.put(playerId, savedItems);
+                if (savedCallback != null) {
+                    paginatedCallbacks.put(playerId, savedCallback);
+                }
+            }
+            
+            // GUI関連データを削除（ページネーションデータは保持）
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            
+            // インベントリを閉じる
+            player.closeInventory();
+        }));
+        
+        // タイトルに現在の値を含める
+        String titleWithValue = title + " [" + currentValue + "]";
+        GUIMenuData menuData = new GUIMenuData(titleWithValue, 18, guiItems);
+        
         createCustomMenuGUI(player, menuData);
     }
     
     @Override
     public void createConfirmationGUI(Player player, String title, String message, Runnable onConfirm, Runnable onCancel) {
+        UUID playerId = player.getUniqueId();
+        
+        // ページネーション関連データを一時保存
+        Integer savedPage = currentPages.get(playerId);
+        List<GUIItemData> savedItems = paginatedItems.get(playerId);
+        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        
         List<GUIItemData> guiItems = new ArrayList<>();
         
         // メッセージ表示
@@ -135,7 +251,21 @@ public class GUIManager implements GUIAPI, Listener {
         ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "はい", 
                 Arrays.asList(ChatColor.GRAY + "クリックして確認"));
         guiItems.add(new GUIItemData(confirmItem, 2, (guiItemData) -> {
-            closeGUI(player);
+            // ページネーションデータを復元
+            if (savedPage != null && savedItems != null) {
+                currentPages.put(playerId, savedPage);
+                paginatedItems.put(playerId, savedItems);
+                if (savedCallback != null) {
+                    paginatedCallbacks.put(playerId, savedCallback);
+                }
+            }
+            
+            // GUI関連データを削除（ページネーションデータは保持）
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            
+            // インベントリを閉じてからコールバック実行
+            player.closeInventory();
             onConfirm.run();
         }));
         
@@ -143,11 +273,26 @@ public class GUIManager implements GUIAPI, Listener {
         ItemStack cancelItem = createItem(Material.REDSTONE, ChatColor.RED + "いいえ", 
                 Arrays.asList(ChatColor.GRAY + "クリックしてキャンセル"));
         guiItems.add(new GUIItemData(cancelItem, 6, (guiItemData) -> {
-            closeGUI(player);
+            // ページネーションデータを復元
+            if (savedPage != null && savedItems != null) {
+                currentPages.put(playerId, savedPage);
+                paginatedItems.put(playerId, savedItems);
+                if (savedCallback != null) {
+                    paginatedCallbacks.put(playerId, savedCallback);
+                }
+            }
+            
+            // GUI関連データを削除（ページネーションデータは保持）
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            
+            // インベントリを閉じてからコールバック実行
+            player.closeInventory();
             onCancel.run();
         }));
         
         GUIMenuData menuData = new GUIMenuData(title, 9, guiItems);
+        
         createCustomMenuGUI(player, menuData);
     }
     
@@ -155,9 +300,13 @@ public class GUIManager implements GUIAPI, Listener {
     public void createCustomMenuGUI(Player player, GUIMenuData menuData) {
         UUID playerId = player.getUniqueId();
         
-        // 既存のGUIを閉じる
+        // ページネーション関連データを一時保存
+        Integer savedPage = currentPages.get(playerId);
+        List<GUIItemData> savedItems = paginatedItems.get(playerId);
+        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        
+        // 既存のGUIデータを削除（インベントリは閉じない）
         if (openGUIs.containsKey(playerId)) {
-            player.closeInventory();
             openGUIs.remove(playerId);
             guiData.remove(playerId);
         }
@@ -188,10 +337,19 @@ public class GUIManager implements GUIAPI, Listener {
         openGUIs.put(playerId, inventory);
         guiData.put(playerId, menuData);
         
+        // ページネーションデータを復元（ページネーション中のGUIの場合）
+        if (savedPage != null && savedItems != null) {
+            currentPages.put(playerId, savedPage);
+            paginatedItems.put(playerId, savedItems);
+            if (savedCallback != null) {
+                paginatedCallbacks.put(playerId, savedCallback);
+            }
+        }
+        
         debugLog("カスタムGUI作成: プレイヤー=" + player.getName() + 
                 ", タイトル=" + menuData.getTitle() + ", アイテム数=" + itemCount + "/" + menuData.getItems().size());
         
-        // インベントリを開く
+        // インベントリを開く（既存のGUIがある場合は直接置き換える）
         player.openInventory(inventory);
     }
     
@@ -286,21 +444,34 @@ public class GUIManager implements GUIAPI, Listener {
         // 戻るボタン
         ItemStack backItem = createItem(Material.ARROW, ChatColor.YELLOW + "戻る",
                 Arrays.asList(ChatColor.GRAY + "コマンド一覧に戻る"));
-        guiItems.add(new GUIItemData(backItem, 53, (guiItemData) -> openCommandAutoGUI(player)));
+        guiItems.add(new GUIItemData(backItem, 53, (guiItemData) -> {
+            // コマンド一覧に戻る際はページネーションGUIを再表示
+            openCommandAutoGUI(player);
+        }));
         
         int size = Math.min(54, ((slot - 1) / 9 + 1) * 9);
         GUIMenuData menuData = new GUIMenuData(ChatColor.DARK_BLUE + commandName + " コマンド", size, guiItems);
+        
         createCustomMenuGUI(player, menuData);
     }
     
     @Override
     public void createPaginatedGUI(Player player, String title, List<GUIItemData> items, int itemsPerPage, Consumer<GUIItemData> onItemClick) {
         UUID playerId = player.getUniqueId();
-        paginatedItems.put(playerId, items);
+        
+        // 既存のページネーションデータをクリア
+        currentPages.remove(playerId);
+        paginatedItems.remove(playerId);
+        paginatedCallbacks.remove(playerId);
+        
+        // 新しいデータを設定
+        paginatedItems.put(playerId, new ArrayList<>(items));
         if (onItemClick != null) {
             paginatedCallbacks.put(playerId, onItemClick);
         }
         currentPages.put(playerId, 0);
+        
+        debugLog("ページネーションGUI初期化: アイテム数=" + items.size() + ", ページあたり=" + itemsPerPage);
         
         showPaginatedPage(player, title, 0, itemsPerPage);
     }
@@ -311,52 +482,85 @@ public class GUIManager implements GUIAPI, Listener {
     private void showPaginatedPage(Player player, String title, int page, int itemsPerPage) {
         UUID playerId = player.getUniqueId();
         List<GUIItemData> allItems = paginatedItems.get(playerId);
-        if (allItems == null) return;
+        if (allItems == null) {
+            debugLog("ページネーション用のアイテムデータが見つかりません: " + playerId);
+            return;
+        }
         
-        int totalPages = (allItems.size() - 1) / itemsPerPage + 1;
-        int startIndex = page * itemsPerPage;
+        // ページ数の計算を修正
+        int totalPages = Math.max(1, (allItems.size() + itemsPerPage - 1) / itemsPerPage);
+        
+        // ページ番号の妥当性チェック
+        int validPage = page;
+        if (validPage < 0) {
+            validPage = 0;
+        } else if (validPage >= totalPages) {
+            validPage = totalPages - 1;
+        }
+        
+        int startIndex = validPage * itemsPerPage;
         int endIndex = Math.min(startIndex + itemsPerPage, allItems.size());
         
         List<GUIItemData> pageItems = new ArrayList<>();
         
-        // ページ内のアイテムを追加（スロット0から開始）
+        // ページ内のアイテムを追加（スロット0から開始し、9の倍数で改行）
+        int slotCounter = 0;
         for (int i = startIndex; i < endIndex; i++) {
             GUIItemData originalItem = allItems.get(i);
-            int newSlot = i - startIndex;
             Consumer<GUIItemData> clickAction = paginatedCallbacks.getOrDefault(playerId, originalItem.getClickAction());
             
-            pageItems.add(new GUIItemData(originalItem.getItemStack(), newSlot, 
+            pageItems.add(new GUIItemData(originalItem.getItemStack(), slotCounter, 
                     clickAction, originalItem.getPermission(), originalItem.isEnabled()));
+            slotCounter++;
         }
         
-        // ナビゲーションボタンを追加
-        if (page > 0) {
-            ItemStack prevItem = createItem(Material.ARROW, ChatColor.YELLOW + "前のページ",
-                    Arrays.asList(ChatColor.GRAY + "ページ " + page + "/" + totalPages));
-            pageItems.add(new GUIItemData(prevItem, 45, (guiItemData) -> 
-                    showPaginatedPage(player, title, page - 1, itemsPerPage)));
+        // 現在のページ番号を更新
+        currentPages.put(playerId, validPage);
+        
+        // ラムダ式で使用するためのfinal変数
+        final int currentPage = validPage;
+        
+        // ナビゲーションボタンを追加（最下段に配置）
+        if (currentPage > 0) {
+            ItemStack prevItem = createItem(Material.ARROW, ChatColor.YELLOW + "◀ 前のページ",
+                    Arrays.asList(
+                        ChatColor.GRAY + "現在: " + (currentPage + 1) + "/" + totalPages,
+                        ChatColor.GRAY + "クリックして前のページへ"
+                    ));
+            pageItems.add(new GUIItemData(prevItem, 45, (guiItemData) -> {
+                debugPageNavigation(player, "前のページクリック: " + (currentPage - 1));
+                debugLog("前のページクリック: " + (currentPage - 1));
+                showPaginatedPage(player, title, currentPage - 1, itemsPerPage);
+            }));
         }
         
-        if (page < totalPages - 1) {
-            ItemStack nextItem = createItem(Material.ARROW, ChatColor.YELLOW + "次のページ",
-                    Arrays.asList(ChatColor.GRAY + "ページ " + (page + 2) + "/" + totalPages));
-            pageItems.add(new GUIItemData(nextItem, 53, (guiItemData) -> 
-                    showPaginatedPage(player, title, page + 1, itemsPerPage)));
+        if (currentPage < totalPages - 1) {
+            ItemStack nextItem = createItem(Material.ARROW, ChatColor.YELLOW + "次のページ ▶",
+                    Arrays.asList(
+                        ChatColor.GRAY + "現在: " + (currentPage + 1) + "/" + totalPages,
+                        ChatColor.GRAY + "クリックして次のページへ"
+                    ));
+            pageItems.add(new GUIItemData(nextItem, 53, (guiItemData) -> {
+                debugPageNavigation(player, "次のページクリック: " + (currentPage + 1));
+                debugLog("次のページクリック: " + (currentPage + 1));
+                showPaginatedPage(player, title, currentPage + 1, itemsPerPage);
+            }));
         }
         
         // ページ情報表示
         ItemStack pageInfo = createItem(Material.BOOK, ChatColor.GREEN + "ページ情報",
-                Arrays.asList(ChatColor.GRAY + "現在のページ: " + (page + 1) + "/" + totalPages,
-                             ChatColor.GRAY + "総アイテム数: " + allItems.size()));
+                Arrays.asList(
+                    ChatColor.GRAY + "現在のページ: " + ChatColor.WHITE + (currentPage + 1) + "/" + totalPages,
+                    ChatColor.GRAY + "総アイテム数: " + ChatColor.WHITE + allItems.size(),
+                    ChatColor.GRAY + "表示中: " + ChatColor.WHITE + (endIndex - startIndex) + "個"
+                ));
         pageItems.add(new GUIItemData(pageInfo, 49, null));
         
-        currentPages.put(playerId, page);
-        
-        String pageTitle = title + " (" + (page + 1) + "/" + totalPages + ")";
+        String pageTitle = title + " (" + (currentPage + 1) + "/" + totalPages + ")";
         GUIMenuData menuData = new GUIMenuData(pageTitle, 54, pageItems);
         
-        debugLog("ページネーションGUI作成: ページ=" + (page + 1) + "/" + totalPages + 
-                ", アイテム数=" + pageItems.size());
+        debugLog("ページネーションGUI作成: ページ=" + (currentPage + 1) + "/" + totalPages + 
+                ", 表示アイテム数=" + (endIndex - startIndex) + ", 総アイテム数=" + pageItems.size());
         
         createCustomMenuGUI(player, menuData);
     }
@@ -372,12 +576,21 @@ public class GUIManager implements GUIAPI, Listener {
     @Override
     public void closeGUI(Player player) {
         UUID playerId = player.getUniqueId();
-        openGUIs.remove(playerId);
-        guiData.remove(playerId);
-        currentPages.remove(playerId);
-        paginatedItems.remove(playerId);
-        paginatedCallbacks.remove(playerId);
-        player.closeInventory();
+        
+        debugLog("GUI手動クローズ: プレイヤー=" + player.getName());
+        
+        // GUIが開いている場合のみクローズ処理を行う
+        if (openGUIs.containsKey(playerId)) {
+            // 全てのGUI関連データを削除
+            openGUIs.remove(playerId);
+            guiData.remove(playerId);
+            currentPages.remove(playerId);
+            paginatedItems.remove(playerId);
+            paginatedCallbacks.remove(playerId);
+            
+            // インベントリを閉じる
+            player.closeInventory();
+        }
     }
     
     /**
@@ -396,6 +609,79 @@ public class GUIManager implements GUIAPI, Listener {
         return item;
     }
     
+    /**
+     * 現在のページネーション状態を取得（デバッグ用）
+     * @param player プレイヤー
+     * @return ページネーション情報
+     */
+    public String getPageDebugInfo(Player player) {
+        UUID playerId = player.getUniqueId();
+        Integer currentPage = currentPages.get(playerId);
+        List<GUIItemData> items = paginatedItems.get(playerId);
+        
+        if (currentPage == null || items == null) {
+            return "ページネーションデータなし";
+        }
+        
+        return String.format("現在ページ: %d, 総アイテム数: %d", currentPage + 1, items.size());
+    }
+    
+    /**
+     * GUIManagerの統計情報を取得（デバッグ用）
+     * @return 統計情報
+     */
+    public String getStatistics() {
+        return String.format("開いているGUI: %d, ページネーション中: %d", 
+                openGUIs.size(), currentPages.size());
+    }
+    
+    /**
+     * ページネーションの詳細なデバッグ情報を出力
+     * @param player プレイヤー
+     * @param action 実行されたアクション
+     */
+    public void debugPageNavigation(Player player, String action) {
+        if (!debugMode) return;
+        
+        UUID playerId = player.getUniqueId();
+        Integer currentPage = currentPages.get(playerId);
+        List<GUIItemData> items = paginatedItems.get(playerId);
+        Consumer<GUIItemData> callback = paginatedCallbacks.get(playerId);
+        
+        debugLog("=== ページネーションデバッグ ===");
+        debugLog("プレイヤー: " + player.getName());
+        debugLog("アクション: " + action);
+        debugLog("現在ページ: " + (currentPage != null ? (currentPage + 1) : "なし"));
+        debugLog("アイテム数: " + (items != null ? items.size() : "なし"));
+        debugLog("コールバック: " + (callback != null ? "設定済み" : "なし"));
+        debugLog("GUI開いているか: " + openGUIs.containsKey(playerId));
+        debugLog("===============================");
+    }
+    
+    /**
+     * GUIデバッグ機能を有効にするメソッド（テスト用）
+     * @param player プレイヤー
+     */
+    public void enableDebugForPlayer(Player player) {
+        setDebugMode(true);
+        player.sendMessage(ChatColor.GREEN + "GUIデバッグモードが有効になりました。");
+        player.sendMessage(ChatColor.GRAY + "現在の統計: " + getStatistics());
+        
+        UUID playerId = player.getUniqueId();
+        if (currentPages.containsKey(playerId)) {
+            player.sendMessage(ChatColor.GRAY + "ページネーション情報: " + getPageDebugInfo(player));
+        }
+    }
+    
+    /**
+     * GUIデバッグ機能を無効にするメソッド（テスト用）
+     * @param player プレイヤー
+     */
+    public void disableDebugForPlayer(Player player) {
+        setDebugMode(false);
+        player.sendMessage(ChatColor.RED + "GUIデバッグモードが無効になりました。");
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
@@ -475,15 +761,22 @@ public class GUIManager implements GUIAPI, Listener {
         Player player = (Player) event.getPlayer();
         UUID playerId = player.getUniqueId();
         
-        // 自動でGUIを閉じる場合のみデータを削除
+        // 管理対象のGUIが閉じられた場合のみデータを削除
         if (openGUIs.containsKey(playerId)) {
-            debugLog("GUI自動クローズ: プレイヤー=" + player.getName());
-            openGUIs.remove(playerId);
-            guiData.remove(playerId);
-            // ページネーション関連のデータは保持しない（メモリリーク防止）
-            currentPages.remove(playerId);
-            paginatedItems.remove(playerId);
-            paginatedCallbacks.remove(playerId);
+            Inventory closedInventory = event.getInventory();
+            Inventory trackedInventory = openGUIs.get(playerId);
+            
+            // 実際に管理しているインベントリが閉じられたかチェック
+            if (closedInventory.equals(trackedInventory)) {
+                debugLog("GUI自動クローズ: プレイヤー=" + player.getName());
+                
+                // 全てのGUI関連データを削除（メモリリーク防止）
+                openGUIs.remove(playerId);
+                guiData.remove(playerId);
+                currentPages.remove(playerId);
+                paginatedItems.remove(playerId);
+                paginatedCallbacks.remove(playerId);
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import com.Tempce.tempceLib.command.annotations.SubCommand;
 import com.Tempce.tempceLib.gui.data.GUIItemData;
 import com.Tempce.tempceLib.gui.data.GUIMenuData;
 import com.Tempce.tempceLib.gui.manager.GUIManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
@@ -227,6 +228,72 @@ public class TempceGUICommand {
         GUIManager.getInstance().createPaginatedGUI(player, "ページネーションテスト", items, 28, null);
     }
     
+    @SubCommand(path = "player-selection", description = "プレイヤー選択GUIのテスト")
+    public void playerSelection(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+
+        Player player = (Player) sender;
+        GUIManager.getInstance().createPlayerSelectionGUI(player, "プレイヤーを選択してください", (selectedPlayer) -> {
+            player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
+        });
+    }
+
+    @SubCommand(path = "player-selection-permission", description = "権限フィルタ付きプレイヤー選択GUIのテスト")
+    public void playerSelectionPermission(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+
+        Player player = (Player) sender;
+        String permission = "tempcelib.gui"; // テスト用権限
+        GUIManager.getInstance().createPlayerSelectionGUI(player, "権限を持つプレイヤーを選択", permission, (selectedPlayer) -> {
+            player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
+            player.sendMessage(ChatColor.GRAY + "権限: " + permission);
+        });
+    }
+
+    @SubCommand(path = "all-player-selection", description = "全プレイヤー選択GUIのテスト")
+    public void allPlayerSelection(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+
+        Player player = (Player) sender;
+        boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
+        GUIManager.getInstance().createAllPlayerSelectionGUI(player, "全プレイヤーから選択", includeOffline, (selectedPlayer) -> {
+            player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
+        });
+    }
+
+    @SubCommand(path = "player-name-selection", description = "プレイヤー名選択GUIのテスト（オフライン対応）")
+    public void playerNameSelection(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+
+        Player player = (Player) sender;
+        boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
+        GUIManager.getInstance().createPlayerNameSelectionGUI(player, 
+            includeOffline ? "全プレイヤー名から選択" : "オンラインプレイヤー名から選択", 
+            includeOffline, (selectedPlayerName) -> {
+                player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー名: " + selectedPlayerName);
+                
+                // オンラインかどうかをチェック
+                Player onlinePlayer = Bukkit.getPlayer(selectedPlayerName);
+                if (onlinePlayer != null) {
+                    player.sendMessage(ChatColor.GREEN + "  → 現在オンラインです");
+                } else {
+                    player.sendMessage(ChatColor.YELLOW + "  → 現在オフラインです");
+                }
+        });
+    }
+
     @SubCommand(path = "number-test-large", description = "大きな範囲での数値選択GUIのテスト")
     public void numberTestLarge(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {

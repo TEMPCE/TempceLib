@@ -52,6 +52,41 @@ public interface GUIAPI {
     void createCustomMenuGUI(Player player, GUIMenuData menuData);
     
     /**
+     * オンラインプレイヤー選択GUIを作成
+     * @param player 対象プレイヤー
+     * @param title GUIタイトル
+     * @param onSelect プレイヤー選択時のコールバック
+     */
+    void createPlayerSelectionGUI(Player player, String title, Consumer<Player> onSelect);
+    
+    /**
+     * 権限フィルタ付きプレイヤー選択GUIを作成
+     * @param player 対象プレイヤー
+     * @param title GUIタイトル
+     * @param permission 必要な権限（nullの場合はフィルタなし）
+     * @param onSelect プレイヤー選択時のコールバック
+     */
+    void createPlayerSelectionGUI(Player player, String title, String permission, Consumer<Player> onSelect);
+    
+    /**
+     * オフラインプレイヤーを含む全プレイヤー選択GUIを作成
+     * @param player 対象プレイヤー
+     * @param title GUIタイトル
+     * @param includeOffline オフラインプレイヤーを含むかどうか
+     * @param onSelect プレイヤー選択時のコールバック
+     */
+    void createAllPlayerSelectionGUI(Player player, String title, boolean includeOffline, Consumer<Player> onSelect);
+    
+    /**
+     * プレイヤー名での選択コールバック（オフライン対応）
+     * @param player 対象プレイヤー
+     * @param title GUIタイトル
+     * @param includeOffline オフラインプレイヤーを含むかどうか
+     * @param onSelectName プレイヤー名選択時のコールバック
+     */
+    void createPlayerNameSelectionGUI(Player player, String title, boolean includeOffline, Consumer<String> onSelectName);
+    
+    /**
      * コマンド自動GUI化メニューを開く
      * @param player 対象プレイヤー
      */

@@ -354,6 +354,291 @@ public class GUIManager implements GUIAPI, Listener {
     }
     
     @Override
+    public void createPlayerSelectionGUI(Player player, String title, Consumer<Player> onSelect) {
+        createPlayerSelectionGUI(player, title, null, onSelect);
+    }
+    
+    @Override
+    public void createPlayerSelectionGUI(Player player, String title, String permission, Consumer<Player> onSelect) {
+        List<Player> availablePlayers = new ArrayList<>();
+        
+        // オンラインプレイヤーを取得
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            // 権限チェック（nullの場合はフィルタなし）
+            if (permission == null || onlinePlayer.hasPermission(permission)) {
+                availablePlayers.add(onlinePlayer);
+            }
+        }
+        
+        if (availablePlayers.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "選択可能なプレイヤーがいません。");
+            return;
+        }
+        
+        // プレイヤーをGUIアイテムに変換
+        List<GUIItemData> guiItems = new ArrayList<>();
+        for (Player targetPlayer : availablePlayers) {
+            ItemStack playerHead = createPlayerHeadWithSkin(targetPlayer.getName());
+            
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + targetPlayer.getName());
+            lore.add(ChatColor.GRAY + "オンライン: " + ChatColor.GREEN + "はい");
+            if (permission != null) {
+                lore.add(ChatColor.GRAY + "権限: " + ChatColor.WHITE + permission);
+            }
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "クリックして選択");
+            
+            ItemMeta meta = playerHead.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.AQUA + targetPlayer.getName());
+                meta.setLore(lore);
+                playerHead.setItemMeta(meta);
+            }
+            
+            guiItems.add(new GUIItemData(playerHead, -1, (guiItemData) -> {
+                player.closeInventory();
+                onSelect.accept(targetPlayer);
+            }));
+        }
+        
+        // ページネーション付きGUIとして表示
+        createPaginatedGUI(player, title, guiItems, 45, null);
+    }
+    
+    @Override
+    public void createAllPlayerSelectionGUI(Player player, String title, boolean includeOffline, Consumer<Player> onSelect) {
+        // オンラインプレイヤーのリストを作成
+        List<PlayerInfo> availablePlayers = new ArrayList<>();
+        
+        // オンラインプレイヤーを追加
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            availablePlayers.add(new PlayerInfo(onlinePlayer.getName(), true, onlinePlayer));
+        }
+        
+        if (includeOffline) {
+            // オフラインプレイヤーも含める場合の処理
+            player.sendMessage(ChatColor.YELLOW + "オフラインプレイヤーを検索中...");
+            
+            // サーバーに参加したことがあるプレイヤーを取得
+            for (org.bukkit.OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+                // オンラインプレイヤーと重複しないようにチェック
+                boolean isOnline = false;
+                for (Player onlinePlayerCheck : Bukkit.getOnlinePlayers()) {
+                    if (onlinePlayerCheck.getUniqueId().equals(offlinePlayer.getUniqueId())) {
+                        isOnline = true;
+                        break;
+                    }
+                }
+                
+                // オフラインプレイヤーのみを追加
+                if (!isOnline && offlinePlayer.getName() != null && offlinePlayer.hasPlayedBefore()) {
+                    availablePlayers.add(new PlayerInfo(offlinePlayer.getName(), false, null));
+                }
+            }
+        }
+        
+        if (availablePlayers.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "選択可能なプレイヤーがいません。");
+            return;
+        }
+        
+        // プレイヤー情報をソート（オンライン → オフライン、名前順）
+        availablePlayers.sort((p1, p2) -> {
+            if (p1.isOnline() && !p2.isOnline()) return -1;
+            if (!p1.isOnline() && p2.isOnline()) return 1;
+            return p1.getName().compareToIgnoreCase(p2.getName());
+        });
+        
+        // プレイヤーをGUIアイテムに変換
+        List<GUIItemData> guiItems = new ArrayList<>();
+        for (PlayerInfo playerInfo : availablePlayers) {
+            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.getName());
+            
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + playerInfo.getName());
+            lore.add(ChatColor.GRAY + "オンライン: " + 
+                    (playerInfo.isOnline() ? ChatColor.GREEN + "はい" : ChatColor.RED + "いいえ"));
+            
+            if (!playerInfo.isOnline()) {
+                lore.add(ChatColor.GRAY + "最終ログイン: " + ChatColor.WHITE + "不明");
+            }
+            
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "クリックして選択");
+            
+            ItemMeta meta = playerHead.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.AQUA + playerInfo.getName());
+                meta.setLore(lore);
+                playerHead.setItemMeta(meta);
+            }
+            
+            guiItems.add(new GUIItemData(playerHead, -1, (guiItemData) -> {
+                player.closeInventory();
+                if (playerInfo.isOnline() && playerInfo.getOnlinePlayer() != null) {
+                    onSelect.accept(playerInfo.getOnlinePlayer());
+                } else {
+                    // オフラインプレイヤーの場合、プレイヤー名のメッセージを送信
+                    player.sendMessage(ChatColor.YELLOW + "選択されたプレイヤー: " + playerInfo.getName() + " (オフライン)");
+                }
+            }));
+        }
+        
+        // ページネーション付きGUIとして表示
+        createPaginatedGUI(player, title + " (" + availablePlayers.size() + "人)", guiItems, 45, null);
+    }
+    
+    @Override
+    public void createPlayerNameSelectionGUI(Player player, String title, boolean includeOffline, Consumer<String> onSelectName) {
+        // オンラインプレイヤーのリストを作成
+        List<PlayerInfo> availablePlayers = new ArrayList<>();
+        
+        // オンラインプレイヤーを追加
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            availablePlayers.add(new PlayerInfo(onlinePlayer.getName(), true, onlinePlayer));
+        }
+        
+        if (includeOffline) {
+            // オフラインプレイヤーも含める場合の処理
+            player.sendMessage(ChatColor.YELLOW + "オフラインプレイヤーを検索中...");
+            
+            // サーバーに参加したことがあるプレイヤーを取得
+            for (org.bukkit.OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+                // オンラインプレイヤーと重複しないようにチェック
+                boolean isOnline = false;
+                for (Player onlinePlayerCheck : Bukkit.getOnlinePlayers()) {
+                    if (onlinePlayerCheck.getUniqueId().equals(offlinePlayer.getUniqueId())) {
+                        isOnline = true;
+                        break;
+                    }
+                }
+                
+                // オフラインプレイヤーのみを追加
+                if (!isOnline && offlinePlayer.getName() != null && offlinePlayer.hasPlayedBefore()) {
+                    availablePlayers.add(new PlayerInfo(offlinePlayer.getName(), false, null));
+                }
+            }
+        }
+        
+        if (availablePlayers.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "選択可能なプレイヤーがいません。");
+            return;
+        }
+        
+        // プレイヤー情報をソート（オンライン → オフライン、名前順）
+        availablePlayers.sort((p1, p2) -> {
+            if (p1.isOnline() && !p2.isOnline()) return -1;
+            if (!p1.isOnline() && p2.isOnline()) return 1;
+            return p1.getName().compareToIgnoreCase(p2.getName());
+        });
+        
+        // プレイヤーをGUIアイテムに変換
+        List<GUIItemData> guiItems = new ArrayList<>();
+        for (PlayerInfo playerInfo : availablePlayers) {
+            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.getName());
+            
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + playerInfo.getName());
+            lore.add(ChatColor.GRAY + "オンライン: " + 
+                    (playerInfo.isOnline() ? ChatColor.GREEN + "はい" : ChatColor.RED + "いいえ"));
+            
+            if (!playerInfo.isOnline()) {
+                lore.add(ChatColor.GRAY + "最終ログイン: " + ChatColor.WHITE + "不明");
+            }
+            
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "クリックして選択");
+            
+            ItemMeta meta = playerHead.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.AQUA + playerInfo.getName());
+                meta.setLore(lore);
+                playerHead.setItemMeta(meta);
+            }
+            
+            guiItems.add(new GUIItemData(playerHead, -1, (guiItemData) -> {
+                player.closeInventory();
+                onSelectName.accept(playerInfo.getName());
+            }));
+        }
+        
+        // ページネーション付きGUIとして表示
+        createPaginatedGUI(player, title + " (" + availablePlayers.size() + "人)", guiItems, 45, null);
+    }
+    
+    /**
+     * プレイヤーの頭アイテムを作成
+     * @param player 対象プレイヤー
+     * @return プレイヤーの頭のItemStack
+     */
+    private ItemStack createPlayerHead(Player player) {
+        return createPlayerHeadWithSkin(player.getName());
+    }
+    
+    /**
+     * プレイヤーの頭アイテムをスキン付きで作成
+     * @param playerName プレイヤー名
+     * @return プレイヤーの頭のItemStack
+     */
+    private ItemStack createPlayerHeadWithSkin(String playerName) {
+        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta meta = skull.getItemMeta();
+        if (meta != null && meta instanceof org.bukkit.inventory.meta.SkullMeta) {
+            org.bukkit.inventory.meta.SkullMeta skullMeta = (org.bukkit.inventory.meta.SkullMeta) meta;
+            skullMeta.setDisplayName(ChatColor.AQUA + playerName);
+            
+            // プレイヤーのスキンを設定
+            try {
+                // オンラインプレイヤーの場合
+                Player onlinePlayer = Bukkit.getPlayer(playerName);
+                if (onlinePlayer != null) {
+                    skullMeta.setOwningPlayer(onlinePlayer);
+                } else {
+                    // オフラインプレイヤーの場合
+                    org.bukkit.OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
+                    if (offlinePlayer.hasPlayedBefore()) {
+                        skullMeta.setOwningPlayer(offlinePlayer);
+                    }
+                }
+            } catch (Exception e) {
+                // スキン設定に失敗した場合はデフォルトのスカルを使用
+                debugLog("プレイヤーヘッドのスキン設定に失敗: " + playerName + " - " + e.getMessage());
+            }
+            
+            skull.setItemMeta(skullMeta);
+        }
+        return skull;
+    }
+    
+    /**
+     * プレイヤー情報を保持するプライベートクラス
+     */
+    private static class PlayerInfo {
+        private final String name;
+        private final boolean online;
+        private final Player onlinePlayer;
+        
+        public PlayerInfo(String name, boolean online, Player onlinePlayer) {
+            this.name = name;
+            this.online = online;
+            this.onlinePlayer = onlinePlayer;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public boolean isOnline() {
+            return online;
+        }
+        
+        public Player getOnlinePlayer() {
+            return onlinePlayer;
+        }
+    }
+
+    @Override
     public void openCommandAutoGUI(Player player) {
         Map<String, CommandData> commands = TempceLib.getInstance().getCommandManager().getCommands();
         List<GUIItemData> guiItems = new ArrayList<>();
@@ -450,7 +735,7 @@ public class GUIManager implements GUIAPI, Listener {
         }));
         
         int size = Math.min(54, ((slot - 1) / 9 + 1) * 9);
-        GUIMenuData menuData = new GUIMenuData(ChatColor.DARK_BLUE + commandName + " コマンド", size, guiItems);
+        GUIMenuData menuData = new GUIMenuData(ChatColor.DARK_BLUE + "コマンド: " + commandName, size, guiItems);
         
         createCustomMenuGUI(player, menuData);
     }

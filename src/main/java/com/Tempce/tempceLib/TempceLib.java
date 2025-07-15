@@ -2,12 +2,15 @@ package com.Tempce.tempceLib;
 
 import com.Tempce.tempceLib.command.examples.TempceLibCommand;
 import com.Tempce.tempceLib.command.manager.CommandManager;
+import com.Tempce.tempceLib.gui.examples.TempceGUICommand;
+import com.Tempce.tempceLib.gui.manager.GUIManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class TempceLib extends JavaPlugin {
 
   private static TempceLib instance;
   private CommandManager commandManager;
+  private GUIManager guiManager;
 
   @Override
   public void onEnable() {
@@ -16,6 +19,9 @@ public final class TempceLib extends JavaPlugin {
     
     // コマンドシステムの初期化
     initializeCommandSystem();
+    
+    // GUIシステムの初期化
+    initializeGUISystem();
     
     getLogger().info("TempceLibが有効化されました！");
   }
@@ -38,10 +44,21 @@ public final class TempceLib extends JavaPlugin {
     
     // plugin.ymlで定義されたコマンドにエグゼキューターとタブコンプリーターを設定
     commandManager.registerCommand(TempceLibCommand.class);
+    commandManager.registerCommand(TempceGUICommand.class);
     
     getLogger().info("コマンドシステムを初期化しました (登録コマンド: " + 
         commandManager.getCommandCount() + "個, サブコマンド: " + 
         commandManager.getSubCommandCount() + "個)");
+  }
+  
+  /**
+   * GUIシステムを初期化する
+   */
+  private void initializeGUISystem() {
+    guiManager = GUIManager.getInstance();
+    guiManager.initialize();
+    
+    getLogger().info("GUIシステムを初期化しました");
   }
   
   /**
@@ -50,5 +67,13 @@ public final class TempceLib extends JavaPlugin {
    */
   public CommandManager getCommandManager() {
     return commandManager;
+  }
+  
+  /**
+   * GUIマネージャーを取得する
+   * @return GUIマネージャー
+   */
+  public GUIManager getGuiManager() {
+    return guiManager;
   }
 }

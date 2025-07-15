@@ -21,6 +21,18 @@ import java.util.function.Consumer;
  */
 public class CommandGUIManager {
     
+    private final ArgumentInputGUIManager argumentInputManager;
+    private final ArgumentInputChatListener chatListener;
+    
+    public CommandGUIManager() {
+        this.chatListener = new ArgumentInputChatListener();
+        this.argumentInputManager = new ArgumentInputGUIManager(this.chatListener);
+    }
+    
+    public ArgumentInputChatListener getChatListener() {
+        return chatListener;
+    }
+    
     /**
      * プレイヤーの権限をチェック
      * @param player プレイヤー
@@ -113,20 +125,50 @@ public class CommandGUIManager {
                 continue;
             }
             
+            // 引数情報を説明に追加
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "説明: " + ChatColor.WHITE + subCommandData.getDescription());
+            lore.add(ChatColor.GRAY + "権限: " + ChatColor.WHITE + 
+                    (subCommandData.getPermission().isEmpty() ? "なし" : subCommandData.getPermission()));
+            
+            if (subCommandData.hasArguments()) {
+                lore.add("");
+                lore.add(ChatColor.GOLD + "引数:");
+                for (int i = 0; i < subCommandData.getArguments().size(); i++) {
+                    var arg = subCommandData.getArguments().get(i);
+                    String prefix = arg.isRequired() ? ChatColor.RED + "必須" : ChatColor.GREEN + "任意";
+                    lore.add(ChatColor.GRAY + " " + (i + 1) + ". " + prefix + ChatColor.WHITE + " " + 
+                            arg.getName() + " (" + arg.getType().getDisplayName() + ")");
+                }
+                lore.add("");
+                lore.add(ChatColor.YELLOW + "クリックして引数を入力");
+            } else {
+                lore.add("");
+                lore.add(ChatColor.YELLOW + "クリックして実行");
+            }
+            
             ItemStack subCommandItem = GUIItemCreator.createItem(Material.PAPER, 
                     ChatColor.AQUA + "/" + commandName + " " + String.join(" ", subCommandData.getPathLevels()),
-                    Arrays.asList(
-                            ChatColor.GRAY + "説明: " + ChatColor.WHITE + subCommandData.getDescription(),
-                            ChatColor.GRAY + "権限: " + ChatColor.WHITE + 
-                                    (subCommandData.getPermission().isEmpty() ? "なし" : subCommandData.getPermission()),
-                            "",
-                            ChatColor.YELLOW + "クリックして実行"
-                    ));
+                    lore);
             
-            final String fullCommand = commandName + " " + String.join(" ", subCommandData.getPathLevels());
+            final String subCommandPath = String.join(".", subCommandData.getPathLevels());
             guiItems.add(new GUIItemData(subCommandItem, slot++, (guiItemData) -> {
-                player.closeInventory();
-                player.performCommand(fullCommand);
+                // 引数があるかチェックして適切な処理を行う
+                if (subCommandData.hasArguments()) {
+                    // 引数入力GUIを開始
+                    argumentInputManager.startArgumentInputFlow(
+                        player, 
+                        commandName, 
+                        subCommandPath, 
+                        subCommandData.getArguments(), 
+                        paginationCreator
+                    );
+                } else {
+                    // 引数がない場合は直接実行
+                    final String fullCommand = commandName + " " + String.join(" ", subCommandData.getPathLevels());
+                    player.closeInventory();
+                    player.performCommand(fullCommand);
+                }
             }));
             
             if (slot >= 54) break;

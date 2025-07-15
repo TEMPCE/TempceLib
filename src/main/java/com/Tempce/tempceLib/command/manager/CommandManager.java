@@ -2,8 +2,11 @@ package com.Tempce.tempceLib.command.manager;
 
 import com.Tempce.tempceLib.TempceLib;
 import com.Tempce.tempceLib.command.annotations.Command;
+import com.Tempce.tempceLib.command.annotations.CommandArguments;
 import com.Tempce.tempceLib.command.annotations.SubCommand;
+import com.Tempce.tempceLib.command.completer.ArgumentTabCompleter;
 import com.Tempce.tempceLib.command.completer.TempceTabCompleter;
+import com.Tempce.tempceLib.command.data.ArgumentData;
 import com.Tempce.tempceLib.command.data.CommandData;
 import com.Tempce.tempceLib.command.data.SubCommandData;
 import com.Tempce.tempceLib.command.executor.TempceCommandExecutor;
@@ -107,6 +110,24 @@ public class CommandManager {
                 
                 method.setAccessible(true);
                 
+                // 引数アノテーションの処理
+                List<ArgumentData> arguments = new ArrayList<>();
+                if (method.isAnnotationPresent(CommandArguments.class)) {
+                    CommandArguments argsAnnotation = method.getAnnotation(CommandArguments.class);
+                    for (CommandArguments.Argument arg : argsAnnotation.value()) {
+                        arguments.add(new ArgumentData(
+                            arg.name(),
+                            arg.type(),
+                            arg.description(),
+                            arg.required(),
+                            arg.defaultValue(),
+                            Arrays.asList(arg.suggestions()),
+                            arg.min(),
+                            arg.max()
+                        ));
+                    }
+                }
+                
                 SubCommandData subCommandData = new SubCommandData(
                     subCommandPath,
                     subCommandAnnotation.permission(),
@@ -116,8 +137,12 @@ public class CommandManager {
                     subCommandAnnotation.usage(),
                     subCommandAnnotation.playerOnly(),
                     method,
-                    commandInstance
+                    commandInstance,
+                    arguments
                 );
+                
+                // 親コマンド名を設定
+                subCommandData.setParentCommandName(commandName);
                 
                 // フルパスで登録（重要：第1レベルのみではなく、完全なパスで登録）
                 subCommands.put(subCommandPath.toLowerCase(), subCommandData);
@@ -187,7 +212,8 @@ public class CommandManager {
                 "help [subcommand]",
                 false, // プレイヤー限定なし
                 helpMethod,
-                new AutoHelpExecutor(commandAnnotation, subCommands)
+                new AutoHelpExecutor(commandAnnotation, subCommands),
+                new ArrayList<>() // 引数なし
             );
             
             // フルパスで登録
@@ -314,6 +340,9 @@ public class CommandManager {
         } else if (args.length >= 2) {
             // 多階層サブコマンドの補完
             handleMultiLevelTabCompletion(sender, commandData, args, completions);
+            
+            // 引数補完もチェック
+            handleArgumentTabCompletion(sender, commandData, args, completions);
         }
         
         Collections.sort(completions);
@@ -390,5 +419,67 @@ public class CommandManager {
                 }
             }
         }
+    }
+    
+    /**
+     * 引数のタブ補完を処理する
+     */
+    private void handleArgumentTabCompletion(CommandSender sender, CommandData commandData, String[] args, List<String> completions) {
+        // 現在の引数パスからサブコマンドを特定
+        SubCommandData targetSubCommand = findMatchingSubCommand(commandData, args);
+        
+        if (targetSubCommand == null || !targetSubCommand.hasArguments()) {
+            return;
+        }
+        
+        // 権限チェック
+        if (!targetSubCommand.getPermission().isEmpty() && !sender.hasPermission(targetSubCommand.getPermission())) {
+            return;
+        }
+        
+        // サブコマンドパスの長さを計算
+        int subCommandLength = targetSubCommand.getPathLevels().length;
+        
+        // 引数のインデックスを計算
+        int argumentIndex = args.length - subCommandLength - 1;
+        
+        if (argumentIndex >= 0 && argumentIndex < targetSubCommand.getArguments().size()) {
+            ArgumentData argument = targetSubCommand.getArguments().get(argumentIndex);
+            String currentInput = args[args.length - 1];
+            
+            // 引数タイプに応じた補完候補を取得
+            List<String> argumentCompletions = ArgumentTabCompleter.getCompletions(argument, currentInput, sender);
+            completions.addAll(argumentCompletions);
+        }
+    }
+    
+    /**
+     * 引数配列からマッチするサブコマンドを見つける
+     */
+    private SubCommandData findMatchingSubCommand(CommandData commandData, String[] args) {
+        // 最も長いマッチするパスを探す
+        SubCommandData bestMatch = null;
+        int longestMatch = 0;
+        
+        for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
+            String[] pathLevels = subCommandData.getPathLevels();
+            
+            if (pathLevels.length <= args.length) {
+                boolean matches = true;
+                for (int i = 0; i < pathLevels.length; i++) {
+                    if (!pathLevels[i].equalsIgnoreCase(args[i])) {
+                        matches = false;
+                        break;
+                    }
+                }
+                
+                if (matches && pathLevels.length > longestMatch) {
+                    bestMatch = subCommandData;
+                    longestMatch = pathLevels.length;
+                }
+            }
+        }
+        
+        return bestMatch;
     }
 }

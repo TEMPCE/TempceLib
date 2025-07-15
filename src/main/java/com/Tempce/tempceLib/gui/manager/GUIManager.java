@@ -62,6 +62,8 @@ public class GUIManager implements GUIAPI {
      */
     public void initialize() {
         Bukkit.getPluginManager().registerEvents(eventHandler, TempceLib.getInstance());
+        // チャットリスナーを登録
+        Bukkit.getPluginManager().registerEvents(commandGUIManager.getChatListener(), TempceLib.getInstance());
     }
     
     /**
@@ -125,95 +127,105 @@ public class GUIManager implements GUIAPI {
      */
     private void createNumberSelectionButtons(List<GUIItemData> guiItems, Player player, String title, 
                                               int min, int max, int currentValue, Consumer<Integer> onSelect) {
-        // 最小値ボタン（スロット0）
-        if (currentValue != min) {
-            ItemStack minItem = GUIItemCreator.createItem(Material.BEDROCK, ChatColor.DARK_RED + "最小値",
-                    List.of(ChatColor.GRAY + "最小値 " + min + " に設定"));
-            guiItems.add(new GUIItemData(minItem, 0, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, min, onSelect)));
+        // 一行目: -64,-32,-10,-1,現在値,1,10,32,64
+        
+        // -64 ボタン（スロット0）
+        int val64 = Math.max(min, currentValue - 64);
+        if (val64 != currentValue) {
+            ItemStack item64 = GUIItemCreator.createItem(Material.BLACK_CONCRETE, ChatColor.DARK_RED + "-64",
+                    List.of(ChatColor.GRAY + "64減らす", ChatColor.GRAY + "→ " + val64));
+            guiItems.add(new GUIItemData(item64, 0, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, val64, onSelect)));
         }
         
-        // -10 ボタン（スロット1）
-        if (currentValue - 10 >= min) {
-            ItemStack decrease10Item = GUIItemCreator.createItem(Material.PURPLE_CONCRETE, ChatColor.DARK_PURPLE + "-10",
-                    List.of(ChatColor.GRAY + "10減らす"));
-            guiItems.add(new GUIItemData(decrease10Item, 1, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 10), onSelect)));
+        // -32 ボタン（スロット1）
+        int val32 = Math.max(min, currentValue - 32);
+        if (val32 != currentValue) {
+            ItemStack item32 = GUIItemCreator.createItem(Material.PURPLE_CONCRETE, ChatColor.DARK_PURPLE + "-32",
+                    List.of(ChatColor.GRAY + "32減らす", ChatColor.GRAY + "→ " + val32));
+            guiItems.add(new GUIItemData(item32, 1, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, val32, onSelect)));
         }
         
-        // その他のボタンも同様に作成...
-        createNumberButtons(guiItems, player, title, min, max, currentValue, onSelect);
-    }
-    
-    /**
-     * 数値操作ボタンを作成
-     */
-    private void createNumberButtons(List<GUIItemData> guiItems, Player player, String title, 
-                                     int min, int max, int currentValue, Consumer<Integer> onSelect) {
-        // -5 ボタン（スロット2）
-        if (currentValue - 5 >= min) {
-            ItemStack decrease5Item = GUIItemCreator.createItem(Material.ORANGE_CONCRETE, ChatColor.GOLD + "-5",
-                    List.of(ChatColor.GRAY + "5減らす"));
-            guiItems.add(new GUIItemData(decrease5Item, 2, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 5), onSelect)));
+        // -10 ボタン（スロット2）
+        int val10 = Math.max(min, currentValue - 10);
+        if (val10 != currentValue) {
+            ItemStack item10 = GUIItemCreator.createItem(Material.ORANGE_CONCRETE, ChatColor.GOLD + "-10",
+                    List.of(ChatColor.GRAY + "10減らす", ChatColor.GRAY + "→ " + val10));
+            guiItems.add(new GUIItemData(item10, 2, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, val10, onSelect)));
         }
         
         // -1 ボタン（スロット3）
-        if (currentValue > min) {
-            ItemStack decreaseItem = GUIItemCreator.createItem(Material.RED_WOOL, ChatColor.RED + "-1",
-                    List.of(ChatColor.GRAY + "1減らす"));
-            guiItems.add(new GUIItemData(decreaseItem, 3, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, currentValue - 1, onSelect)));
+        int val1 = Math.max(min, currentValue - 1);
+        if (val1 != currentValue) {
+            ItemStack item1 = GUIItemCreator.createItem(Material.RED_WOOL, ChatColor.RED + "-1",
+                    List.of(ChatColor.GRAY + "1減らす", ChatColor.GRAY + "→ " + val1));
+            guiItems.add(new GUIItemData(item1, 3, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, val1, onSelect)));
         }
         
-        // 数値表示アイテム（スロット4）
-        ItemStack displayItem = GUIItemCreator.createItem(Material.PAPER, ChatColor.GREEN + "現在の値: " + currentValue, 
+        // 現在値表示アイテム（スロット4）- クリックでチャット入力
+        ItemStack displayItem = GUIItemCreator.createItem(Material.PAPER, ChatColor.GREEN + "現在値: " + currentValue, 
                 Arrays.asList(
                     ChatColor.GRAY + "範囲: " + min + " - " + max,
-                    ChatColor.GRAY + "左右のボタンで調整してください"
+                    ChatColor.YELLOW + "クリックでチャット入力",
+                    ChatColor.GRAY + "左右のボタンで調整も可能"
                 ));
-        guiItems.add(new GUIItemData(displayItem, 4, null));
+        guiItems.add(new GUIItemData(displayItem, 4, (guiItemData) -> {
+            player.closeInventory();
+            player.sendMessage(ChatColor.AQUA + "チャットで数値を入力してください（範囲: " + min + " - " + max + "）:");
+            setupChatInput(player, title, min, max, onSelect);
+        }));
         
         // +1 ボタン（スロット5）
-        if (currentValue < max) {
-            ItemStack increaseItem = GUIItemCreator.createItem(Material.LIME_WOOL, ChatColor.GREEN + "+1",
-                    List.of(ChatColor.GRAY + "1増やす"));
-            guiItems.add(new GUIItemData(increaseItem, 5, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, currentValue + 1, onSelect)));
+        int valPlus1 = Math.min(max, currentValue + 1);
+        if (valPlus1 != currentValue) {
+            ItemStack itemPlus1 = GUIItemCreator.createItem(Material.LIME_WOOL, ChatColor.GREEN + "+1",
+                    List.of(ChatColor.GRAY + "1増やす", ChatColor.GRAY + "→ " + valPlus1));
+            guiItems.add(new GUIItemData(itemPlus1, 5, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, valPlus1, onSelect)));
         }
         
-        // +5, +10, 最大値ボタンも同様に作成
-        createIncrementButtons(guiItems, player, title, min, max, currentValue, onSelect);
+        // +10 ボタン（スロット6）
+        int valPlus10 = Math.min(max, currentValue + 10);
+        if (valPlus10 != currentValue) {
+            ItemStack itemPlus10 = GUIItemCreator.createItem(Material.LIGHT_BLUE_CONCRETE, ChatColor.AQUA + "+10",
+                    List.of(ChatColor.GRAY + "10増やす", ChatColor.GRAY + "→ " + valPlus10));
+            guiItems.add(new GUIItemData(itemPlus10, 6, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, valPlus10, onSelect)));
+        }
+        
+        // +32 ボタン（スロット7）
+        int valPlus32 = Math.min(max, currentValue + 32);
+        if (valPlus32 != currentValue) {
+            ItemStack itemPlus32 = GUIItemCreator.createItem(Material.LIME_CONCRETE, ChatColor.GREEN + "+32",
+                    List.of(ChatColor.GRAY + "32増やす", ChatColor.GRAY + "→ " + valPlus32));
+            guiItems.add(new GUIItemData(itemPlus32, 7, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, valPlus32, onSelect)));
+        }
+        
+        // +64 ボタン（スロット8）
+        int valPlus64 = Math.min(max, currentValue + 64);
+        if (valPlus64 != currentValue) {
+            ItemStack itemPlus64 = GUIItemCreator.createItem(Material.WHITE_CONCRETE, ChatColor.YELLOW + "+64",
+                    List.of(ChatColor.GRAY + "64増やす", ChatColor.GRAY + "→ " + valPlus64));
+            guiItems.add(new GUIItemData(itemPlus64, 8, (guiItemData) -> 
+                    createNumberSelectionGUI(player, title, min, max, valPlus64, onSelect)));
+        }
     }
     
     /**
-     * 増加ボタンを作成
+     * チャットで数値入力を受け付ける
      */
-    private void createIncrementButtons(List<GUIItemData> guiItems, Player player, String title,
-                                        int min, int max, int currentValue, Consumer<Integer> onSelect) {
-        // +5 ボタン（スロット6）
-        if (currentValue + 5 <= max) {
-            ItemStack increase5Item = GUIItemCreator.createItem(Material.LIGHT_BLUE_CONCRETE, ChatColor.AQUA + "+5",
-                    List.of(ChatColor.GRAY + "5増やす"));
-            guiItems.add(new GUIItemData(increase5Item, 6, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 5), onSelect)));
-        }
-        
-        // +10 ボタン（スロット7）
-        if (currentValue + 10 <= max) {
-            ItemStack increase10Item = GUIItemCreator.createItem(Material.LIME_CONCRETE, ChatColor.GREEN + "+10",
-                    List.of(ChatColor.GRAY + "10増やす"));
-            guiItems.add(new GUIItemData(increase10Item, 7, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 10), onSelect)));
-        }
-        
-        // 最大値ボタン（スロット8）
-        if (currentValue != max) {
-            ItemStack maxItem = GUIItemCreator.createItem(Material.BEACON, ChatColor.YELLOW + "最大値",
-                    List.of(ChatColor.GRAY + "最大値 " + max + " に設定"));
-            guiItems.add(new GUIItemData(maxItem, 8, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, max, onSelect)));
-        }
+    private void setupChatInput(Player player, String title, int min, int max, Consumer<Integer> onSelect) {
+        // TODO: チャットリスナーを実装する必要があります
+        // ここでは仮の実装として、メッセージを表示して元のGUIに戻します
+        Bukkit.getScheduler().runTaskLater(TempceLib.getInstance(), () -> {
+            player.sendMessage(ChatColor.YELLOW + "チャット入力機能は現在開発中です。");
+            player.sendMessage(ChatColor.GRAY + "GUIから再度選択してください。");
+            createNumberSelectionGUI(player, title, min, max, (min + max) / 2, onSelect);
+        }, 40L); // 2秒後にGUIを再表示
     }
     
     /**

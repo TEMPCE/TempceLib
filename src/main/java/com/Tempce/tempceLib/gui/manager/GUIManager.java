@@ -100,32 +100,32 @@ public class GUIManager implements GUIAPI, Listener {
         
         // 最小値ボタン（スロット0）
         if (currentValue != min) {
-            ItemStack minItem = createItem(Material.BEDROCK, ChatColor.DARK_RED + "最小値", 
-                    Arrays.asList(ChatColor.GRAY + "最小値 " + min + " に設定"));
+            ItemStack minItem = createItem(Material.BEDROCK, ChatColor.DARK_RED + "最小値",
+                    List.of(ChatColor.GRAY + "最小値 " + min + " に設定"));
             guiItems.add(new GUIItemData(minItem, 0, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, min, onSelect)));
         }
         
         // -10 ボタン（スロット1）
         if (currentValue - 10 >= min) {
-            ItemStack decrease10Item = createItem(Material.PURPLE_CONCRETE, ChatColor.DARK_PURPLE + "-10", 
-                    Arrays.asList(ChatColor.GRAY + "10減らす"));
+            ItemStack decrease10Item = createItem(Material.PURPLE_CONCRETE, ChatColor.DARK_PURPLE + "-10",
+                    List.of(ChatColor.GRAY + "10減らす"));
             guiItems.add(new GUIItemData(decrease10Item, 1, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 10), onSelect)));
         }
         
         // -5 ボタン（スロット2）
         if (currentValue - 5 >= min) {
-            ItemStack decrease5Item = createItem(Material.ORANGE_CONCRETE, ChatColor.GOLD + "-5", 
-                    Arrays.asList(ChatColor.GRAY + "5減らす"));
+            ItemStack decrease5Item = createItem(Material.ORANGE_CONCRETE, ChatColor.GOLD + "-5",
+                    List.of(ChatColor.GRAY + "5減らす"));
             guiItems.add(new GUIItemData(decrease5Item, 2, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, Math.max(min, currentValue - 5), onSelect)));
         }
         
         // -1 ボタン（スロット3）
         if (currentValue > min) {
-            ItemStack decreaseItem = createItem(Material.RED_WOOL, ChatColor.RED + "-1", 
-                    Arrays.asList(ChatColor.GRAY + "1減らす"));
+            ItemStack decreaseItem = createItem(Material.RED_WOOL, ChatColor.RED + "-1",
+                    List.of(ChatColor.GRAY + "1減らす"));
             guiItems.add(new GUIItemData(decreaseItem, 3, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, currentValue - 1, onSelect)));
         }
@@ -140,32 +140,32 @@ public class GUIManager implements GUIAPI, Listener {
         
         // +1 ボタン（スロット5）
         if (currentValue < max) {
-            ItemStack increaseItem = createItem(Material.LIME_WOOL, ChatColor.GREEN + "+1", 
-                    Arrays.asList(ChatColor.GRAY + "1増やす"));
+            ItemStack increaseItem = createItem(Material.LIME_WOOL, ChatColor.GREEN + "+1",
+                    List.of(ChatColor.GRAY + "1増やす"));
             guiItems.add(new GUIItemData(increaseItem, 5, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, currentValue + 1, onSelect)));
         }
         
         // +5 ボタン（スロット6）
         if (currentValue + 5 <= max) {
-            ItemStack increase5Item = createItem(Material.LIGHT_BLUE_CONCRETE, ChatColor.AQUA + "+5", 
-                    Arrays.asList(ChatColor.GRAY + "5増やす"));
+            ItemStack increase5Item = createItem(Material.LIGHT_BLUE_CONCRETE, ChatColor.AQUA + "+5",
+                    List.of(ChatColor.GRAY + "5増やす"));
             guiItems.add(new GUIItemData(increase5Item, 6, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 5), onSelect)));
         }
         
         // +10 ボタン（スロット7）
         if (currentValue + 10 <= max) {
-            ItemStack increase10Item = createItem(Material.LIME_CONCRETE, ChatColor.GREEN + "+10", 
-                    Arrays.asList(ChatColor.GRAY + "10増やす"));
+            ItemStack increase10Item = createItem(Material.LIME_CONCRETE, ChatColor.GREEN + "+10",
+                    List.of(ChatColor.GRAY + "10増やす"));
             guiItems.add(new GUIItemData(increase10Item, 7, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, Math.min(max, currentValue + 10), onSelect)));
         }
         
         // 最大値ボタン（スロット8）
         if (currentValue != max) {
-            ItemStack maxItem = createItem(Material.BEACON, ChatColor.YELLOW + "最大値", 
-                    Arrays.asList(ChatColor.GRAY + "最大値 " + max + " に設定"));
+            ItemStack maxItem = createItem(Material.BEACON, ChatColor.YELLOW + "最大値",
+                    List.of(ChatColor.GRAY + "最大値 " + max + " に設定"));
             guiItems.add(new GUIItemData(maxItem, 8, (guiItemData) -> 
                     createNumberSelectionGUI(player, title, min, max, max, onSelect)));
         }
@@ -173,17 +173,10 @@ public class GUIManager implements GUIAPI, Listener {
         // 2行目のボタン配置: [ ] [ ] [リセット] [ ] [ ] [確定] [キャンセル] [ ] [ ]
         
         // リセットボタン（スロット11 = 2行目の3個目）
-        int originalDefault = Math.max(min, Math.min(max, defaultValue));
-        if (currentValue != originalDefault) {
-            ItemStack resetItem = createItem(Material.CLOCK, ChatColor.BLUE + "リセット", 
-                    Arrays.asList(ChatColor.GRAY + "デフォルト値 " + originalDefault + " に戻す"));
-            guiItems.add(new GUIItemData(resetItem, 11, (guiItemData) -> 
-                    createNumberSelectionGUI(player, title, min, max, originalDefault, onSelect)));
-        }
-        
-        // 確定ボタン（スロット13 = 2行目の真ん中）
-        ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "確定", 
-                Arrays.asList(ChatColor.GRAY + "この値で決定する"));
+
+      // 確定ボタン（スロット13 = 2行目の真ん中）
+        ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "確定",
+                List.of(ChatColor.GRAY + "この値で決定する"));
         guiItems.add(new GUIItemData(confirmItem, 13, (guiItemData) -> {
             // ページネーションデータを復元
             if (savedPage != null && savedItems != null) {
@@ -204,8 +197,8 @@ public class GUIManager implements GUIAPI, Listener {
         }));
         
         // キャンセルボタン（スロット14 = 2行目の6つ目）
-        ItemStack cancelItem = createItem(Material.BARRIER, ChatColor.RED + "キャンセル", 
-                Arrays.asList(ChatColor.GRAY + "変更をキャンセル"));
+        ItemStack cancelItem = createItem(Material.BARRIER, ChatColor.RED + "キャンセル",
+                List.of(ChatColor.GRAY + "変更をキャンセル"));
         guiItems.add(new GUIItemData(cancelItem, 14, (guiItemData) -> {
             // ページネーションデータを復元
             if (savedPage != null && savedItems != null) {
@@ -243,13 +236,13 @@ public class GUIManager implements GUIAPI, Listener {
         List<GUIItemData> guiItems = new ArrayList<>();
         
         // メッセージ表示
-        ItemStack messageItem = createItem(Material.BOOK, ChatColor.YELLOW + "確認", 
-                Arrays.asList(ChatColor.WHITE + message));
+        ItemStack messageItem = createItem(Material.BOOK, ChatColor.YELLOW + "確認",
+                List.of(ChatColor.WHITE + message));
         guiItems.add(new GUIItemData(messageItem, 4, null));
         
         // 確認ボタン
-        ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "はい", 
-                Arrays.asList(ChatColor.GRAY + "クリックして確認"));
+        ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "はい",
+                List.of(ChatColor.GRAY + "クリックして確認"));
         guiItems.add(new GUIItemData(confirmItem, 2, (guiItemData) -> {
             // ページネーションデータを復元
             if (savedPage != null && savedItems != null) {
@@ -270,8 +263,8 @@ public class GUIManager implements GUIAPI, Listener {
         }));
         
         // キャンセルボタン
-        ItemStack cancelItem = createItem(Material.REDSTONE, ChatColor.RED + "いいえ", 
-                Arrays.asList(ChatColor.GRAY + "クリックしてキャンセル"));
+        ItemStack cancelItem = createItem(Material.REDSTONE, ChatColor.RED + "いいえ",
+                List.of(ChatColor.GRAY + "クリックしてキャンセル"));
         guiItems.add(new GUIItemData(cancelItem, 6, (guiItemData) -> {
             // ページネーションデータを復元
             if (savedPage != null && savedItems != null) {
@@ -445,42 +438,32 @@ public class GUIManager implements GUIAPI, Listener {
         
         // プレイヤー情報をソート（オンライン → オフライン、名前順）
         availablePlayers.sort((p1, p2) -> {
-            if (p1.isOnline() && !p2.isOnline()) return -1;
-            if (!p1.isOnline() && p2.isOnline()) return 1;
-            return p1.getName().compareToIgnoreCase(p2.getName());
+            if (p1.online() && !p2.online()) return -1;
+            if (!p1.online() && p2.online()) return 1;
+            return p1.name().compareToIgnoreCase(p2.name());
         });
         
         // プレイヤーをGUIアイテムに変換
         List<GUIItemData> guiItems = new ArrayList<>();
         for (PlayerInfo playerInfo : availablePlayers) {
-            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.getName());
-            
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + playerInfo.getName());
-            lore.add(ChatColor.GRAY + "オンライン: " + 
-                    (playerInfo.isOnline() ? ChatColor.GREEN + "はい" : ChatColor.RED + "いいえ"));
-            
-            if (!playerInfo.isOnline()) {
-                lore.add(ChatColor.GRAY + "最終ログイン: " + ChatColor.WHITE + "不明");
-            }
-            
-            lore.add("");
-            lore.add(ChatColor.YELLOW + "クリックして選択");
-            
+            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.name());
+
+            List<String> lore = getStrings(playerInfo);
+
             ItemMeta meta = playerHead.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.AQUA + playerInfo.getName());
+                meta.setDisplayName(ChatColor.AQUA + playerInfo.name());
                 meta.setLore(lore);
                 playerHead.setItemMeta(meta);
             }
             
             guiItems.add(new GUIItemData(playerHead, -1, (guiItemData) -> {
                 player.closeInventory();
-                if (playerInfo.isOnline() && playerInfo.getOnlinePlayer() != null) {
-                    onSelect.accept(playerInfo.getOnlinePlayer());
+                if (playerInfo.online() && playerInfo.onlinePlayer() != null) {
+                    onSelect.accept(playerInfo.onlinePlayer());
                 } else {
                     // オフラインプレイヤーの場合、プレイヤー名のメッセージを送信
-                    player.sendMessage(ChatColor.YELLOW + "選択されたプレイヤー: " + playerInfo.getName() + " (オフライン)");
+                    player.sendMessage(ChatColor.YELLOW + "選択されたプレイヤー: " + playerInfo.name() + " (オフライン)");
                 }
             }));
         }
@@ -488,7 +471,22 @@ public class GUIManager implements GUIAPI, Listener {
         // ページネーション付きGUIとして表示
         createPaginatedGUI(player, title + " (" + availablePlayers.size() + "人)", guiItems, 45, null);
     }
-    
+
+    private static List<String> getStrings(PlayerInfo playerInfo) {
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + playerInfo.name());
+        lore.add(ChatColor.GRAY + "オンライン: " +
+                (playerInfo.online() ? ChatColor.GREEN + "はい" : ChatColor.RED + "いいえ"));
+
+        if (!playerInfo.online()) {
+            lore.add(ChatColor.GRAY + "最終ログイン: " + ChatColor.WHITE + "不明");
+        }
+
+        lore.add("");
+        lore.add(ChatColor.YELLOW + "クリックして選択");
+        return lore;
+    }
+
     @Override
     public void createPlayerNameSelectionGUI(Player player, String title, boolean includeOffline, Consumer<String> onSelectName) {
         // オンラインプレイヤーのリストを作成
@@ -528,38 +526,28 @@ public class GUIManager implements GUIAPI, Listener {
         
         // プレイヤー情報をソート（オンライン → オフライン、名前順）
         availablePlayers.sort((p1, p2) -> {
-            if (p1.isOnline() && !p2.isOnline()) return -1;
-            if (!p1.isOnline() && p2.isOnline()) return 1;
-            return p1.getName().compareToIgnoreCase(p2.getName());
+            if (p1.online() && !p2.online()) return -1;
+            if (!p1.online() && p2.online()) return 1;
+            return p1.name().compareToIgnoreCase(p2.name());
         });
         
         // プレイヤーをGUIアイテムに変換
         List<GUIItemData> guiItems = new ArrayList<>();
         for (PlayerInfo playerInfo : availablePlayers) {
-            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.getName());
-            
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "プレイヤー: " + ChatColor.WHITE + playerInfo.getName());
-            lore.add(ChatColor.GRAY + "オンライン: " + 
-                    (playerInfo.isOnline() ? ChatColor.GREEN + "はい" : ChatColor.RED + "いいえ"));
-            
-            if (!playerInfo.isOnline()) {
-                lore.add(ChatColor.GRAY + "最終ログイン: " + ChatColor.WHITE + "不明");
-            }
-            
-            lore.add("");
-            lore.add(ChatColor.YELLOW + "クリックして選択");
-            
+            ItemStack playerHead = createPlayerHeadWithSkin(playerInfo.name());
+
+            List<String> lore = getStrings(playerInfo);
+
             ItemMeta meta = playerHead.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.AQUA + playerInfo.getName());
+                meta.setDisplayName(ChatColor.AQUA + playerInfo.name());
                 meta.setLore(lore);
                 playerHead.setItemMeta(meta);
             }
             
             guiItems.add(new GUIItemData(playerHead, -1, (guiItemData) -> {
                 player.closeInventory();
-                onSelectName.accept(playerInfo.getName());
+                onSelectName.accept(playerInfo.name());
             }));
         }
         
@@ -584,9 +572,8 @@ public class GUIManager implements GUIAPI, Listener {
     private ItemStack createPlayerHeadWithSkin(String playerName) {
         ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta meta = skull.getItemMeta();
-        if (meta != null && meta instanceof org.bukkit.inventory.meta.SkullMeta) {
-            org.bukkit.inventory.meta.SkullMeta skullMeta = (org.bukkit.inventory.meta.SkullMeta) meta;
-            skullMeta.setDisplayName(ChatColor.AQUA + playerName);
+        if (meta instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
+          skullMeta.setDisplayName(ChatColor.AQUA + playerName);
             
             // プレイヤーのスキンを設定
             try {
@@ -610,32 +597,11 @@ public class GUIManager implements GUIAPI, Listener {
         }
         return skull;
     }
-    
+
     /**
      * プレイヤー情報を保持するプライベートクラス
      */
-    private static class PlayerInfo {
-        private final String name;
-        private final boolean online;
-        private final Player onlinePlayer;
-        
-        public PlayerInfo(String name, boolean online, Player onlinePlayer) {
-            this.name = name;
-            this.online = online;
-            this.onlinePlayer = onlinePlayer;
-        }
-        
-        public String getName() {
-            return name;
-        }
-        
-        public boolean isOnline() {
-            return online;
-        }
-        
-        public Player getOnlinePlayer() {
-            return onlinePlayer;
-        }
+        private record PlayerInfo(String name, boolean online, Player onlinePlayer) {
     }
 
     @Override
@@ -728,7 +694,7 @@ public class GUIManager implements GUIAPI, Listener {
         
         // 戻るボタン
         ItemStack backItem = createItem(Material.ARROW, ChatColor.YELLOW + "戻る",
-                Arrays.asList(ChatColor.GRAY + "コマンド一覧に戻る"));
+                List.of(ChatColor.GRAY + "コマンド一覧に戻る"));
         guiItems.add(new GUIItemData(backItem, 53, (guiItemData) -> {
             // コマンド一覧に戻る際はページネーションGUIを再表示
             openCommandAutoGUI(player);
@@ -969,10 +935,9 @@ public class GUIManager implements GUIAPI, Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        
-        Player player = (Player) event.getWhoClicked();
-        UUID playerId = player.getUniqueId();
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+      UUID playerId = player.getUniqueId();
         
         // 管理対象のGUIかチェック
         if (!openGUIs.containsKey(playerId)) return;
@@ -1041,10 +1006,9 @@ public class GUIManager implements GUIAPI, Listener {
     
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
-        
-        Player player = (Player) event.getPlayer();
-        UUID playerId = player.getUniqueId();
+        if (!(event.getPlayer() instanceof Player player)) return;
+
+      UUID playerId = player.getUniqueId();
         
         // 管理対象のGUIが閉じられた場合のみデータを削除
         if (openGUIs.containsKey(playerId)) {

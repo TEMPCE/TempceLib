@@ -16,6 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * GUIシステムのテスト用コマンド
@@ -58,25 +59,23 @@ public class TempceGUICommand {
     
     @SubCommand(path = "commands", description = "コマンド自動GUI化を開く")
     public void commands(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        GUIManager.getInstance().openCommandAutoGUI(player);
+
+      GUIManager.getInstance().openCommandAutoGUI(player);
         player.sendMessage(ChatColor.GREEN + "コマンドGUIを開きました！");
     }
     
     @SubCommand(path = "item-selection", description = "アイテム選択GUIのテスト")
     public void itemSelection(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        List<ItemStack> items = Arrays.asList(
+
+      List<ItemStack> items = Arrays.asList(
                 createItem(Material.DIAMOND, "ダイヤモンド"),
                 createItem(Material.GOLD_INGOT, "金インゴット"),
                 createItem(Material.IRON_INGOT, "鉄インゴット"),
@@ -84,22 +83,18 @@ public class TempceGUICommand {
                 createItem(Material.REDSTONE, "レッドストーン")
         );
         
-        GUIManager.getInstance().createItemSelectionGUI(player, "アイテムを選択してください", items, (selectedItem) -> {
-            player.sendMessage(ChatColor.GREEN + "選択されたアイテム: " + 
-                    selectedItem.getItemMeta().getDisplayName());
-        });
+        GUIManager.getInstance().createItemSelectionGUI(player, "アイテムを選択してください", items, (selectedItem) -> player.sendMessage(ChatColor.GREEN + "選択されたアイテム: " +
+                Objects.requireNonNull(selectedItem.getItemMeta()).getDisplayName()));
     }
     
     @SubCommand(path = "number-selection", description = "数値選択GUIのテスト")
     public void numberSelection(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        
-        // 引数で範囲を指定できるようにする
+
+      // 引数で範囲を指定できるようにする
         int min = -128, max = 128, defaultValue = 0;
         
         if (args.length >= 1) {
@@ -139,33 +134,29 @@ public class TempceGUICommand {
         
         player.sendMessage(ChatColor.GRAY + "数値選択GUI: 範囲=" + min + "~" + max + ", デフォルト=" + defaultValue);
         
-        GUIManager.getInstance().createNumberSelectionGUI(player, "数値を選択してください", min, max, defaultValue, (selectedNumber) -> {
-            player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber);
-        });
+        GUIManager.getInstance().createNumberSelectionGUI(player, "数値を選択してください", min, max, defaultValue, (selectedNumber) -> player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber));
     }
     
     @SubCommand(path = "confirmation", description = "確認ダイアログGUIのテスト")
     public void confirmation(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        GUIManager.getInstance().createConfirmationGUI(player, "確認", "本当に実行しますか？", 
+
+      GUIManager.getInstance().createConfirmationGUI(player, "確認", "本当に実行しますか？",
                 () -> player.sendMessage(ChatColor.GREEN + "実行されました！"),
                 () -> player.sendMessage(ChatColor.YELLOW + "キャンセルされました。"));
     }
     
     @SubCommand(path = "custom", description = "カスタムメニューGUIのテスト")
     public void custom(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        List<GUIItemData> items = new ArrayList<>();
+
+      List<GUIItemData> items = new ArrayList<>();
         
         // 各種アクションボタン
         items.add(new GUIItemData(
@@ -207,13 +198,12 @@ public class TempceGUICommand {
     
     @SubCommand(path = "paginated", description = "ページネーションGUIのテスト")
     public void paginated(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        List<GUIItemData> items = new ArrayList<>();
+
+      List<GUIItemData> items = new ArrayList<>();
         
         // 大量のアイテムを作成
         for (int i = 1; i <= 100; i++) {
@@ -230,26 +220,22 @@ public class TempceGUICommand {
     
     @SubCommand(path = "player-selection", description = "プレイヤー選択GUIのテスト")
     public void playerSelection(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
 
-        Player player = (Player) sender;
-        GUIManager.getInstance().createPlayerSelectionGUI(player, "プレイヤーを選択してください", (selectedPlayer) -> {
-            player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
-        });
+      GUIManager.getInstance().createPlayerSelectionGUI(player, "プレイヤーを選択してください", (selectedPlayer) -> player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName()));
     }
 
     @SubCommand(path = "player-selection-permission", description = "権限フィルタ付きプレイヤー選択GUIのテスト")
     public void playerSelectionPermission(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
 
-        Player player = (Player) sender;
-        String permission = "tempcelib.gui"; // テスト用権限
+      String permission = "tempcelib.gui"; // テスト用権限
         GUIManager.getInstance().createPlayerSelectionGUI(player, "権限を持つプレイヤーを選択", permission, (selectedPlayer) -> {
             player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
             player.sendMessage(ChatColor.GRAY + "権限: " + permission);
@@ -258,27 +244,23 @@ public class TempceGUICommand {
 
     @SubCommand(path = "all-player-selection", description = "全プレイヤー選択GUIのテスト")
     public void allPlayerSelection(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
 
-        Player player = (Player) sender;
-        boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
-        GUIManager.getInstance().createAllPlayerSelectionGUI(player, "全プレイヤーから選択", includeOffline, (selectedPlayer) -> {
-            player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName());
-        });
+      boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
+        GUIManager.getInstance().createAllPlayerSelectionGUI(player, "全プレイヤーから選択", includeOffline, (selectedPlayer) -> player.sendMessage(ChatColor.GREEN + "選択されたプレイヤー: " + selectedPlayer.getName()));
     }
 
     @SubCommand(path = "player-name-selection", description = "プレイヤー名選択GUIのテスト（オフライン対応）")
     public void playerNameSelection(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
 
-        Player player = (Player) sender;
-        boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
+      boolean includeOffline = args.length > 0 && args[0].equalsIgnoreCase("offline");
         GUIManager.getInstance().createPlayerNameSelectionGUI(player, 
             includeOffline ? "全プレイヤー名から選択" : "オンラインプレイヤー名から選択", 
             includeOffline, (selectedPlayerName) -> {
@@ -296,28 +278,22 @@ public class TempceGUICommand {
 
     @SubCommand(path = "number-test-large", description = "大きな範囲での数値選択GUIのテスト")
     public void numberTestLarge(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        GUIManager.getInstance().createNumberSelectionGUI(player, "大きな数値を選択", 0, 10000, 1000, (selectedNumber) -> {
-            player.sendMessage(ChatColor.GREEN + "選択された大きな数値: " + selectedNumber);
-        });
+
+      GUIManager.getInstance().createNumberSelectionGUI(player, "大きな数値を選択", 0, 10000, 1000, (selectedNumber) -> player.sendMessage(ChatColor.GREEN + "選択された大きな数値: " + selectedNumber));
     }
     
     @SubCommand(path = "number-test-negative", description = "負の数を含む数値選択GUIのテスト")
     public void numberTestNegative(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
             return;
         }
-        
-        Player player = (Player) sender;
-        GUIManager.getInstance().createNumberSelectionGUI(player, "負の数を含む範囲", -1000, 1000, 0, (selectedNumber) -> {
-            player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber);
-        });
+
+      GUIManager.getInstance().createNumberSelectionGUI(player, "負の数を含む範囲", -1000, 1000, 0, (selectedNumber) -> player.sendMessage(ChatColor.GREEN + "選択された数値: " + selectedNumber));
     }
 
     /**

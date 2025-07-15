@@ -71,6 +71,57 @@ public class GUIManager implements GUIAPI, Listener {
         }
     }
     
+    /**
+     * プレイヤーのページネーション情報を一時保存するためのクラス
+     */
+    private static class PaginationContext {
+        Integer savedPage;
+        List<GUIItemData> savedItems;
+        Consumer<GUIItemData> savedCallback;
+        
+        PaginationContext(Integer page, List<GUIItemData> items, Consumer<GUIItemData> callback) {
+            this.savedPage = page;
+            this.savedItems = items;
+            this.savedCallback = callback;
+        }
+    }
+    
+    /**
+     * プレイヤーのページネーション情報を保存
+     * @param playerId プレイヤーID
+     * @return 保存された情報
+     */
+    private PaginationContext savePaginationContext(UUID playerId) {
+        Integer savedPage = currentPages.get(playerId);
+        List<GUIItemData> savedItems = paginatedItems.get(playerId);
+        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        return new PaginationContext(savedPage, savedItems, savedCallback);
+    }
+    
+    /**
+     * プレイヤーのページネーション情報を復元
+     * @param playerId プレイヤーID
+     * @param context 復元する情報
+     */
+    private void restorePaginationContext(UUID playerId, PaginationContext context) {
+        if (context != null && context.savedPage != null && context.savedItems != null) {
+            currentPages.put(playerId, context.savedPage);
+            paginatedItems.put(playerId, context.savedItems);
+            if (context.savedCallback != null) {
+                paginatedCallbacks.put(playerId, context.savedCallback);
+            }
+        }
+    }
+    
+    /**
+     * GUI関連データを削除（ページネーションデータは保持）
+     * @param playerId プレイヤーID
+     */
+    private void cleanupGUIData(UUID playerId) {
+        openGUIs.remove(playerId);
+        guiData.remove(playerId);
+    }
+    
     @Override
     public void createItemSelectionGUI(Player player, String title, List<ItemStack> items, Consumer<ItemStack> onSelect) {
         List<GUIItemData> guiItems = new ArrayList<>();
@@ -89,9 +140,7 @@ public class GUIManager implements GUIAPI, Listener {
         UUID playerId = player.getUniqueId();
         
         // ページネーション関連データを一時保存（数字選択GUIはページネーションをクリアすべきではない）
-        Integer savedPage = currentPages.get(playerId);
-        List<GUIItemData> savedItems = paginatedItems.get(playerId);
-        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        PaginationContext context = savePaginationContext(playerId);
         
         List<GUIItemData> guiItems = new ArrayList<>();
         int currentValue = Math.max(min, Math.min(max, defaultValue));
@@ -173,23 +222,20 @@ public class GUIManager implements GUIAPI, Listener {
         // 2行目のボタン配置: [ ] [ ] [リセット] [ ] [ ] [確定] [キャンセル] [ ] [ ]
         
         // リセットボタン（スロット11 = 2行目の3個目）
-
-      // 確定ボタン（スロット13 = 2行目の真ん中）
+        ItemStack resetItem = createItem(Material.REDSTONE, ChatColor.RED + "リセット",
+                List.of(ChatColor.GRAY + "値を最小値 " + min + " にリセット"));
+        guiItems.add(new GUIItemData(resetItem, 11, (guiItemData) -> 
+                createNumberSelectionGUI(player, title, min, max, min, onSelect)));
+        
+        // 確定ボタン（スロット13 = 2行目の真ん中）
         ItemStack confirmItem = createItem(Material.EMERALD, ChatColor.GREEN + "確定",
                 List.of(ChatColor.GRAY + "この値で決定する"));
         guiItems.add(new GUIItemData(confirmItem, 13, (guiItemData) -> {
             // ページネーションデータを復元
-            if (savedPage != null && savedItems != null) {
-                currentPages.put(playerId, savedPage);
-                paginatedItems.put(playerId, savedItems);
-                if (savedCallback != null) {
-                    paginatedCallbacks.put(playerId, savedCallback);
-                }
-            }
+            restorePaginationContext(playerId, context);
             
             // GUI関連データを削除（ページネーションデータは保持）
-            openGUIs.remove(playerId);
-            guiData.remove(playerId);
+            cleanupGUIData(playerId);
             
             // インベントリを閉じてからコールバック実行
             player.closeInventory();
@@ -201,17 +247,10 @@ public class GUIManager implements GUIAPI, Listener {
                 List.of(ChatColor.GRAY + "変更をキャンセル"));
         guiItems.add(new GUIItemData(cancelItem, 14, (guiItemData) -> {
             // ページネーションデータを復元
-            if (savedPage != null && savedItems != null) {
-                currentPages.put(playerId, savedPage);
-                paginatedItems.put(playerId, savedItems);
-                if (savedCallback != null) {
-                    paginatedCallbacks.put(playerId, savedCallback);
-                }
-            }
+            restorePaginationContext(playerId, context);
             
             // GUI関連データを削除（ページネーションデータは保持）
-            openGUIs.remove(playerId);
-            guiData.remove(playerId);
+            cleanupGUIData(playerId);
             
             // インベントリを閉じる
             player.closeInventory();
@@ -229,9 +268,7 @@ public class GUIManager implements GUIAPI, Listener {
         UUID playerId = player.getUniqueId();
         
         // ページネーション関連データを一時保存
-        Integer savedPage = currentPages.get(playerId);
-        List<GUIItemData> savedItems = paginatedItems.get(playerId);
-        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        PaginationContext context = savePaginationContext(playerId);
         
         List<GUIItemData> guiItems = new ArrayList<>();
         
@@ -245,17 +282,10 @@ public class GUIManager implements GUIAPI, Listener {
                 List.of(ChatColor.GRAY + "クリックして確認"));
         guiItems.add(new GUIItemData(confirmItem, 2, (guiItemData) -> {
             // ページネーションデータを復元
-            if (savedPage != null && savedItems != null) {
-                currentPages.put(playerId, savedPage);
-                paginatedItems.put(playerId, savedItems);
-                if (savedCallback != null) {
-                    paginatedCallbacks.put(playerId, savedCallback);
-                }
-            }
+            restorePaginationContext(playerId, context);
             
             // GUI関連データを削除（ページネーションデータは保持）
-            openGUIs.remove(playerId);
-            guiData.remove(playerId);
+            cleanupGUIData(playerId);
             
             // インベントリを閉じてからコールバック実行
             player.closeInventory();
@@ -267,17 +297,10 @@ public class GUIManager implements GUIAPI, Listener {
                 List.of(ChatColor.GRAY + "クリックしてキャンセル"));
         guiItems.add(new GUIItemData(cancelItem, 6, (guiItemData) -> {
             // ページネーションデータを復元
-            if (savedPage != null && savedItems != null) {
-                currentPages.put(playerId, savedPage);
-                paginatedItems.put(playerId, savedItems);
-                if (savedCallback != null) {
-                    paginatedCallbacks.put(playerId, savedCallback);
-                }
-            }
+            restorePaginationContext(playerId, context);
             
             // GUI関連データを削除（ページネーションデータは保持）
-            openGUIs.remove(playerId);
-            guiData.remove(playerId);
+            cleanupGUIData(playerId);
             
             // インベントリを閉じてからコールバック実行
             player.closeInventory();
@@ -294,9 +317,7 @@ public class GUIManager implements GUIAPI, Listener {
         UUID playerId = player.getUniqueId();
         
         // ページネーション関連データを一時保存
-        Integer savedPage = currentPages.get(playerId);
-        List<GUIItemData> savedItems = paginatedItems.get(playerId);
-        Consumer<GUIItemData> savedCallback = paginatedCallbacks.get(playerId);
+        PaginationContext context = savePaginationContext(playerId);
         
         // 既存のGUIデータを削除（インベントリは閉じない）
         if (openGUIs.containsKey(playerId)) {
@@ -331,13 +352,7 @@ public class GUIManager implements GUIAPI, Listener {
         guiData.put(playerId, menuData);
         
         // ページネーションデータを復元（ページネーション中のGUIの場合）
-        if (savedPage != null && savedItems != null) {
-            currentPages.put(playerId, savedPage);
-            paginatedItems.put(playerId, savedItems);
-            if (savedCallback != null) {
-                paginatedCallbacks.put(playerId, savedCallback);
-            }
-        }
+        restorePaginationContext(playerId, context);
         
         debugLog("カスタムGUI作成: プレイヤー=" + player.getName() + 
                 ", タイトル=" + menuData.getTitle() + ", アイテム数=" + itemCount + "/" + menuData.getItems().size());

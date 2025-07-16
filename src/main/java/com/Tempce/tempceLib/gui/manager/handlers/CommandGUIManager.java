@@ -41,9 +41,9 @@ public class CommandGUIManager {
      */
     private boolean hasPermission(Player player, String permission) {
         if (permission == null || permission.isEmpty()) {
-            return true;
+            return false;
         }
-        return player.hasPermission(permission);
+        return !player.hasPermission(permission);
     }
     
     /**
@@ -60,7 +60,7 @@ public class CommandGUIManager {
             CommandData commandData = entry.getValue();
             
             // 権限チェック
-            if (!hasPermission(player, commandData.getPermission())) {
+            if (hasPermission(player, commandData.getPermission())) {
                 continue;
             }
             
@@ -121,7 +121,7 @@ public class CommandGUIManager {
         int slot = 9; // 2行目から開始
         for (SubCommandData subCommandData : commandData.getSubCommands().values()) {
             // 権限チェック
-            if (!hasPermission(player, subCommandData.getPermission())) {
+            if (hasPermission(player, subCommandData.getPermission())) {
                 continue;
             }
             
@@ -187,25 +187,12 @@ public class CommandGUIManager {
         paginationCreator.accept(new CommandGUIData(
             ChatColor.DARK_BLUE + "コマンド: " + commandName, guiItems, size, null, CommandGUIType.SUBCOMMAND_MENU));
     }
-    
+
     /**
      * コマンドGUI用のデータクラス
      */
-    public static class CommandGUIData {
-        public final String title;
-        public final List<GUIItemData> items;
-        public final int size;
-        public final Consumer<GUIItemData> onItemClick;
-        public final CommandGUIType type;
-        
-        public CommandGUIData(String title, List<GUIItemData> items, int size, 
-                              Consumer<GUIItemData> onItemClick, CommandGUIType type) {
-            this.title = title;
-            this.items = items;
-            this.size = size;
-            this.onItemClick = onItemClick;
-            this.type = type;
-        }
+        public record CommandGUIData(String title, List<GUIItemData> items, int size, Consumer<GUIItemData> onItemClick,
+                                     CommandGUIType type) {
     }
     
     /**

@@ -20,26 +20,20 @@ import java.util.function.Consumer;
 public class ArgumentInputChatListener implements Listener {
     
     private final Map<UUID, ChatInputData> waitingForInput = new ConcurrentHashMap<>();
-    
+    private final Map<UUID, NumberInputData> waitingForNumberInput = new ConcurrentHashMap<>();
+
     /**
      * チャット入力待機状態のデータ
      */
-    public static class ChatInputData {
-        private final ArgumentInputSession session;
-        private final Consumer<CommandGUIManager.CommandGUIData> paginationCreator;
-        private final ArgumentInputGUIManager argumentInputManager;
-        
-        public ChatInputData(ArgumentInputSession session, 
-                           Consumer<CommandGUIManager.CommandGUIData> paginationCreator,
-                           ArgumentInputGUIManager argumentInputManager) {
-            this.session = session;
-            this.paginationCreator = paginationCreator;
-            this.argumentInputManager = argumentInputManager;
-        }
-        
-        public ArgumentInputSession getSession() { return session; }
-        public Consumer<CommandGUIManager.CommandGUIData> getPaginationCreator() { return paginationCreator; }
-        public ArgumentInputGUIManager getArgumentInputManager() { return argumentInputManager; }
+        public record ChatInputData(ArgumentInputSession session,
+                                    Consumer<CommandGUIManager.CommandGUIData> paginationCreator,
+                                    ArgumentInputGUIManager argumentInputManager) {
+    }
+
+    /**
+     * 数値入力データ（GUIManagerから移行）
+     */
+        public record NumberInputData(String title, int min, int max, Consumer<Integer> onSelect) {
     }
     
     /**
@@ -49,6 +43,15 @@ public class ArgumentInputChatListener implements Listener {
                               Consumer<CommandGUIManager.CommandGUIData> paginationCreator,
                               ArgumentInputGUIManager argumentInputManager) {
         waitingForInput.put(player.getUniqueId(), new ChatInputData(session, paginationCreator, argumentInputManager));
+    }
+    
+    /**
+     * プレイヤーを数値入力待機状態にする（GUIManagerから移行）
+     */
+    public void startNumberInput(Player player, String title, int min, int max, Consumer<Integer> onSelect) {
+        UUID playerId = player.getUniqueId();
+        waitingForNumberInput.put(playerId, new NumberInputData(title, min, max, onSelect));
+        player.sendMessage(ChatColor.YELLOW + "数値を入力してください。'cancel'でキャンセルできます。");
     }
     
     /**
@@ -70,6 +73,13 @@ public class ArgumentInputChatListener implements Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
         
+        // 数値入力待機状態をチェック（優先度高）
+        if (waitingForNumberInput.containsKey(playerId)) {
+            handleNumberInput(event);
+            return;
+        }
+        
+        // 引数入力待機状態をチェック
         if (!waitingForInput.containsKey(playerId)) {
             return;
         }
@@ -88,12 +98,12 @@ public class ArgumentInputChatListener implements Listener {
         
         if (input.isEmpty()) {
             player.sendMessage(ChatColor.RED + "入力が空です。再度入力してください。");
-            inputData.getArgumentInputManager().showArgumentInputGUI(player, inputData.getSession(), inputData.getPaginationCreator());
+            inputData.argumentInputManager().showArgumentInputGUI(player, inputData.session(), inputData.paginationCreator());
             return;
         }
         
         // 引数タイプに応じたバリデーション
-        var currentArg = inputData.getSession().getCurrentArgument();
+        var currentArg = inputData.session().getCurrentArgument();
         if (currentArg != null) {
             String validationError = validateInput(input, currentArg);
             if (validationError != null) {
@@ -105,11 +115,60 @@ public class ArgumentInputChatListener implements Listener {
         }
         
         // 入力を受け入れて次の処理へ
-        inputData.getSession().addArgument(input);
+        inputData.session().addArgument(input);
         player.sendMessage(ChatColor.GREEN + "入力を受け付けました: " + ChatColor.WHITE + input);
         
         // 次の引数入力またはコマンド実行へ
-        inputData.getArgumentInputManager().showArgumentInputGUI(player, inputData.getSession(), inputData.getPaginationCreator());
+        inputData.argumentInputManager().showArgumentInputGUI(player, inputData.session(), inputData.paginationCreator());
+    }
+    
+    /**
+     * 数値入力の処理（GUIManagerから移行）
+     */
+    private void handleNumberInput(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+        
+        NumberInputData inputData = waitingForNumberInput.get(playerId);
+        if (inputData == null) {
+            return; // 待機状態ではない
+        }
+        
+        event.setCancelled(true); // チャットメッセージを他のプレイヤーに表示しない
+        
+        String message = event.getMessage().trim();
+        
+        // キャンセルコマンド
+        if (message.equalsIgnoreCase("cancel")) {
+            waitingForNumberInput.remove(playerId);
+            org.bukkit.Bukkit.getScheduler().runTask(com.Tempce.tempceLib.TempceLib.getInstance(), () -> {
+                player.sendMessage(ChatColor.RED + "数値入力をキャンセルしました。");
+                // GUIに戻る処理は必要に応じて実装
+            });
+            return;
+        }
+        
+        // 数値の解析
+        try {
+            int value = Integer.parseInt(message);
+            
+            // 範囲チェック
+            if (value < inputData.min() || value > inputData.max()) {
+                org.bukkit.Bukkit.getScheduler().runTask(com.Tempce.tempceLib.TempceLib.getInstance(), () -> player.sendMessage(ChatColor.RED + "数値が範囲外です。" +
+                                 inputData.min() + " - " + inputData.max() + " の範囲で入力してください。"));
+                return;
+            }
+            
+            // 入力成功
+            waitingForNumberInput.remove(playerId);
+            org.bukkit.Bukkit.getScheduler().runTask(com.Tempce.tempceLib.TempceLib.getInstance(), () -> {
+                player.sendMessage(ChatColor.GREEN + "数値 " + value + " が選択されました。");
+                inputData.onSelect().accept(value);
+            });
+            
+        } catch (NumberFormatException e) {
+            org.bukkit.Bukkit.getScheduler().runTask(com.Tempce.tempceLib.TempceLib.getInstance(), () -> player.sendMessage(ChatColor.RED + "無効な数値です。整数を入力してください。"));
+        }
     }
     
     /**
@@ -170,8 +229,15 @@ public class ArgumentInputChatListener implements Listener {
                 break;
                 
             case STRING:
-            case PLAYER:
+            case ONLINE_PLAYER:
+            case ALL_PLAYER:
             case ITEM_ID:
+            case ITEM_ID_TOOL:
+            case ITEM_ID_BLOCK:
+            case ITEM_ID_NATURE_BLOCK:
+            case ITEM_ID_WEAPON_ARMOR:
+            case ITEM_ID_FOOD:
+            case ITEM_ID_DECORATION:
             case ENTITY_ID:
             case WORLD:
             case ENCHANTMENT:
@@ -187,6 +253,8 @@ public class ArgumentInputChatListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         // プレイヤーがログアウトしたら待機状態をクリア
-        waitingForInput.remove(event.getPlayer().getUniqueId());
+        UUID playerId = event.getPlayer().getUniqueId();
+        waitingForInput.remove(playerId);
+        waitingForNumberInput.remove(playerId);
     }
 }

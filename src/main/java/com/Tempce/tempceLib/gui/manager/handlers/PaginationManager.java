@@ -138,7 +138,10 @@ public class PaginationManager {
         int slotCounter = 0;
         for (int i = startIndex; i < endIndex; i++) {
             GUIItemData originalItem = allItems.get(i);
-            Consumer<GUIItemData> clickAction = paginatedCallbacks.getOrDefault(playerId, originalItem.getClickAction());
+            Consumer<GUIItemData> clickAction = paginatedCallbacks.get(playerId);
+            if (clickAction == null) {
+                clickAction = originalItem.getClickAction();
+            }
             
             pageItems.add(new GUIItemData(originalItem.getItemStack(), slotCounter, 
                     clickAction, originalItem.getPermission(), originalItem.isEnabled()));

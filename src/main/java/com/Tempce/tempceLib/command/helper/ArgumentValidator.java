@@ -106,7 +106,8 @@ public class ArgumentValidator {
                 }
                 break;
                 
-            case PLAYER:
+            case ONLINE_PLAYER:
+            case ALL_PLAYER:
             case ITEM_ID:
             case ENTITY_ID:
             case WORLD:

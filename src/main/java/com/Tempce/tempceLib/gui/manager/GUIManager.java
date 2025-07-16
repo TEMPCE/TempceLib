@@ -2,14 +2,17 @@ package com.Tempce.tempceLib.gui.manager;
 
 import com.Tempce.tempceLib.TempceLib;
 import com.Tempce.tempceLib.api.GUIAPI;
+import com.Tempce.tempceLib.command.data.ArgumentType;
 import com.Tempce.tempceLib.gui.data.GUIItemData;
 import com.Tempce.tempceLib.gui.data.GUIMenuData;
+import com.Tempce.tempceLib.gui.data.MaterialCategory;
 import com.Tempce.tempceLib.gui.manager.handlers.*;
 import com.Tempce.tempceLib.gui.manager.util.GUIItemCreator;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -19,7 +22,7 @@ import java.util.function.Consumer;
 /**
  * GUI管理システムのメインマネージャー（リファクタリング版）
  */
-public class GUIManager implements GUIAPI {
+public class GUIManager implements GUIAPI, Listener {
     private static GUIManager instance;
     private boolean debugMode = false;
     
@@ -39,10 +42,6 @@ public class GUIManager implements GUIAPI {
         this.commandGUIManager = new CommandGUIManager();
         this.eventHandler = new GUIEventHandler(this::hasGUIPermission, () -> {
             // データクリーンアップコールバック
-            UUID[] playerIds = new UUID[0];
-            for (UUID playerId : playerIds) {
-                paginationManager.clearPaginationData(playerId);
-            }
         });
     }
     
@@ -64,6 +63,8 @@ public class GUIManager implements GUIAPI {
         Bukkit.getPluginManager().registerEvents(eventHandler, TempceLib.getInstance());
         // チャットリスナーを登録
         Bukkit.getPluginManager().registerEvents(commandGUIManager.getChatListener(), TempceLib.getInstance());
+        // 数値入力用チャットリスナーを登録
+        Bukkit.getPluginManager().registerEvents(this, TempceLib.getInstance());
     }
     
     /**
@@ -219,13 +220,8 @@ public class GUIManager implements GUIAPI {
      * チャットで数値入力を受け付ける
      */
     private void setupChatInput(Player player, String title, int min, int max, Consumer<Integer> onSelect) {
-        // TODO: チャットリスナーを実装する必要があります
-        // ここでは仮の実装として、メッセージを表示して元のGUIに戻します
-        Bukkit.getScheduler().runTaskLater(TempceLib.getInstance(), () -> {
-            player.sendMessage(ChatColor.YELLOW + "チャット入力機能は現在開発中です。");
-            player.sendMessage(ChatColor.GRAY + "GUIから再度選択してください。");
-            createNumberSelectionGUI(player, title, min, max, (min + max) / 2, onSelect);
-        }, 40L); // 2秒後にGUIを再表示
+        // ArgumentInputChatListenerを使用
+        commandGUIManager.getChatListener().startNumberInput(player, title, min, max, onSelect);
     }
     
     /**
@@ -349,39 +345,39 @@ public class GUIManager implements GUIAPI {
     @Override
     public void createPlayerSelectionGUI(Player player, String title, Consumer<Player> onSelect) {
         playerSelectionManager.createPlayerSelectionGUI(player, title, onSelect, 
-            data -> paginationManager.createPaginatedGUI(player, data.title, data.items, data.itemsPerPage, 
-                                                          data.onItemClick, menuData -> createCustomMenuGUI(player, menuData)));
+            data -> paginationManager.createPaginatedGUI(player, data.title(), data.items(), data.itemsPerPage(),
+                    data.onItemClick(), menuData -> createCustomMenuGUI(player, menuData)));
     }
     
     @Override
     public void createPlayerSelectionGUI(Player player, String title, String permission, Consumer<Player> onSelect) {
         playerSelectionManager.createPlayerSelectionGUI(player, title, permission, onSelect,
-            data -> paginationManager.createPaginatedGUI(player, data.title, data.items, data.itemsPerPage, 
-                                                          data.onItemClick, menuData -> createCustomMenuGUI(player, menuData)));
+            data -> paginationManager.createPaginatedGUI(player, data.title(), data.items(), data.itemsPerPage(),
+                    data.onItemClick(), menuData -> createCustomMenuGUI(player, menuData)));
     }
     
     @Override
     public void createAllPlayerSelectionGUI(Player player, String title, boolean includeOffline, Consumer<Player> onSelect) {
         playerSelectionManager.createAllPlayerSelectionGUI(player, title, includeOffline, onSelect,
-            data -> paginationManager.createPaginatedGUI(player, data.title, data.items, data.itemsPerPage, 
-                                                          data.onItemClick, menuData -> createCustomMenuGUI(player, menuData)));
+            data -> paginationManager.createPaginatedGUI(player, data.title(), data.items(), data.itemsPerPage(),
+                    data.onItemClick(), menuData -> createCustomMenuGUI(player, menuData)));
     }
     
     @Override
     public void createPlayerNameSelectionGUI(Player player, String title, boolean includeOffline, Consumer<String> onSelectName) {
         playerSelectionManager.createPlayerNameSelectionGUI(player, title, includeOffline, onSelectName,
-            data -> paginationManager.createPaginatedGUI(player, data.title, data.items, data.itemsPerPage, 
-                                                          data.onItemClick, menuData -> createCustomMenuGUI(player, menuData)));
+            data -> paginationManager.createPaginatedGUI(player, data.title(), data.items(), data.itemsPerPage(),
+                    data.onItemClick(), menuData -> createCustomMenuGUI(player, menuData)));
     }
     
     @Override
     public void openCommandAutoGUI(Player player) {
         commandGUIManager.openCommandAutoGUI(player, data -> {
-            if (data.type == CommandGUIManager.CommandGUIType.COMMAND_LIST) {
-                paginationManager.createPaginatedGUI(player, data.title, data.items, data.size, 
-                                                      data.onItemClick, menuData -> createCustomMenuGUI(player, menuData));
+            if (data.type() == CommandGUIManager.CommandGUIType.COMMAND_LIST) {
+                paginationManager.createPaginatedGUI(player, data.title(), data.items(), data.size(),
+                        data.onItemClick(), menuData -> createCustomMenuGUI(player, menuData));
             } else {
-                GUIMenuData menuData = new GUIMenuData(data.title, data.size, data.items);
+                GUIMenuData menuData = new GUIMenuData(data.title(), data.size(), data.items());
                 createCustomMenuGUI(player, menuData);
             }
         });
@@ -390,7 +386,7 @@ public class GUIManager implements GUIAPI {
     @Override
     public void openSubCommandGUI(Player player, String commandName) {
         commandGUIManager.openSubCommandGUI(player, commandName, data -> {
-            GUIMenuData menuData = new GUIMenuData(data.title, data.size, data.items);
+            GUIMenuData menuData = new GUIMenuData(data.title(), data.size(), data.items());
             createCustomMenuGUI(player, menuData);
         });
     }
@@ -474,4 +470,68 @@ public class GUIManager implements GUIAPI {
         setDebugMode(false);
         player.sendMessage(ChatColor.RED + "GUIデバッグモードが無効になりました。");
     }
+
+    @Override
+    public void createMaterialSelectionGUI(Player player, String title, MaterialCategory category, Consumer<org.bukkit.Material> onSelect) {
+        // MaterialCategoryからArgumentTypeに変換
+        ArgumentType argumentType = convertCategoryToArgumentType(category);
+        
+        // ArgumentInputGUIManagerのgetItemsByTypeメソッドを使用
+        ArgumentInputGUIManager argumentInputManager = new ArgumentInputGUIManager(null);
+        org.bukkit.Material[] materials = argumentInputManager.getItemsByType(argumentType);
+        
+        // 有効なマテリアルのみをフィルタリング
+        List<org.bukkit.Material> validMaterials = new ArrayList<>();
+        for (org.bukkit.Material material : materials) {
+            if (material.isItem()) {
+                validMaterials.add(material);
+            }
+        }
+        
+        // GUIItemDataリストを作成
+        List<GUIItemData> guiItems = new ArrayList<>();
+        for (int i = 0; i < validMaterials.size(); i++) {
+            org.bukkit.Material material = validMaterials.get(i);
+            
+            // 特殊なマテリアル変換（液体ブロック対応）
+            org.bukkit.Material displayMaterial = material;
+            String materialName = material.name();
+            
+            if (argumentType != ArgumentType.ITEM_ID_BLOCK && material == org.bukkit.Material.WATER) {
+                displayMaterial = org.bukkit.Material.WATER_BUCKET;
+            } else if (argumentType != ArgumentType.ITEM_ID_BLOCK && material == org.bukkit.Material.LAVA) {
+                displayMaterial = org.bukkit.Material.LAVA_BUCKET;
+            }
+            
+            ItemStack displayItem = GUIItemCreator.createItem(displayMaterial, 
+                    ChatColor.GREEN + materialName,
+                    Arrays.asList(
+                            ChatColor.GRAY + "ID: " + ChatColor.WHITE + materialName,
+                            ChatColor.GRAY + "カテゴリ: " + ChatColor.WHITE + category.getDisplayName(),
+                            "",
+                            ChatColor.YELLOW + "クリックして選択"
+                    ));
+            
+            guiItems.add(new GUIItemData(displayItem, i, (guiItemData) -> onSelect.accept(material)));
+        }
+        
+        // ページネーション付きGUIを作成（アイテムクリックは個別のGUIItemDataで処理）
+        createPaginatedGUI(player, title + " (" + validMaterials.size() + "個のアイテム)", guiItems, 45, null);
+    }
+    
+    /**
+     * MaterialCategoryをArgumentTypeに変換
+     */
+    private ArgumentType convertCategoryToArgumentType(MaterialCategory category) {
+        return switch (category) {
+            case TOOLS -> ArgumentType.ITEM_ID_TOOL;
+            case BLOCKS -> ArgumentType.ITEM_ID_BLOCK;
+            case NATURE_BLOCKS -> ArgumentType.ITEM_ID_NATURE_BLOCK;
+            case WEAPONS_ARMOR -> ArgumentType.ITEM_ID_WEAPON_ARMOR;
+            case FOOD -> ArgumentType.ITEM_ID_FOOD;
+            case DECORATION -> ArgumentType.ITEM_ID_DECORATION;
+            case ALL -> ArgumentType.ITEM_ID; // 全てのアイテム
+        };
+    }
+    
 }

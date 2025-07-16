@@ -31,8 +31,12 @@ public class ArgumentTabCompleter {
         List<String> completions = new ArrayList<>();
         
         switch (argument.getType()) {
-            case PLAYER:
-                completions.addAll(getPlayerCompletions(currentInput));
+            case ONLINE_PLAYER:
+                completions.addAll(getOnlinePlayerCompletions(currentInput));
+                break;
+                
+            case ALL_PLAYER:
+                completions.addAll(getAllPlayerCompletions(currentInput));
                 break;
                 
             case WORLD:
@@ -40,7 +44,7 @@ public class ArgumentTabCompleter {
                 break;
                 
             case ITEM_ID:
-                completions.addAll(getItemCompletions(currentInput));
+                completions.addAll(getItemCompletionsByType(ArgumentType.ITEM_ID, currentInput));
                 break;
                 
             case ITEM_ID_TOOL:
@@ -106,13 +110,34 @@ public class ArgumentTabCompleter {
     }
     
     /**
-     * プレイヤー名の補完候補
+     * オンラインプレイヤー名の補完候補
      */
-    private static List<String> getPlayerCompletions(String input) {
+    private static List<String> getOnlinePlayerCompletions(String input) {
         return Bukkit.getOnlinePlayers().stream()
                 .map(Player::getName)
                 .filter(name -> name.toLowerCase().startsWith(input.toLowerCase()))
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * 全プレイヤー名の補完候補（オフライン含む）
+     */
+    private static List<String> getAllPlayerCompletions(String input) {
+        List<String> completions = new ArrayList<>();
+        
+        // オンラインプレイヤーを最初に追加
+        completions.addAll(getOnlinePlayerCompletions(input));
+        
+        // オフラインプレイヤーを追加（重複除外）
+        for (org.bukkit.OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+            String name = offlinePlayer.getName();
+            if (name != null && name.toLowerCase().startsWith(input.toLowerCase()) 
+                && !completions.contains(name)) {
+                completions.add(name);
+            }
+        }
+        
+        return completions;
     }
     
     /**
@@ -123,40 +148,6 @@ public class ArgumentTabCompleter {
                 .map(World::getName)
                 .filter(name -> name.toLowerCase().startsWith(input.toLowerCase()))
                 .collect(Collectors.toList());
-    }
-    
-    /**
-     * アイテムIDの補完候補
-     */
-    private static List<String> getItemCompletions(String input) {
-        List<String> items = new ArrayList<>();
-        
-        // よく使われるアイテムを優先的に候補に含める
-        String[] commonItems = {
-                "diamond", "iron_ingot", "gold_ingot", "emerald", "netherite_ingot",
-                "diamond_sword", "diamond_pickaxe", "diamond_axe", "bow", "crossbow",
-                "ender_pearl", "bread", "cooked_beef", "apple", "golden_apple",
-                "potion", "torch", "cobblestone", "oak_log", "dirt", "stone", "sand"
-        };
-        
-        for (String item : commonItems) {
-            if (item.toLowerCase().startsWith(input.toLowerCase())) {
-                items.add(item);
-            }
-        }
-        
-        // 全Materialから候補を追加（ただし、上限を設ける）
-        if (items.size() < 10) {
-            for (Material material : Material.values()) {
-                if (material.name().toLowerCase().startsWith(input.toLowerCase()) && 
-                    !items.contains(material.name().toLowerCase())) {
-                    items.add(material.name().toLowerCase());
-                    if (items.size() >= 20) break; // 候補数制限
-                }
-            }
-        }
-        
-        return items;
     }
     
     /**

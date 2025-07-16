@@ -302,21 +302,11 @@ public class PlayerSelectionManager {
         lore.add(ChatColor.YELLOW + "クリックして選択");
         return lore;
     }
-    
+
     /**
      * プレイヤー選択GUI用のデータクラス
      */
-    public static class PlayerSelectionGUIData {
-        public final String title;
-        public final List<GUIItemData> items;
-        public final int itemsPerPage;
-        public final Consumer<GUIItemData> onItemClick;
-        
-        public PlayerSelectionGUIData(String title, List<GUIItemData> items, int itemsPerPage, Consumer<GUIItemData> onItemClick) {
-            this.title = title;
-            this.items = items;
-            this.itemsPerPage = itemsPerPage;
-            this.onItemClick = onItemClick;
-        }
+        public record PlayerSelectionGUIData(String title, List<GUIItemData> items, int itemsPerPage,
+                                             Consumer<GUIItemData> onItemClick) {
     }
 }

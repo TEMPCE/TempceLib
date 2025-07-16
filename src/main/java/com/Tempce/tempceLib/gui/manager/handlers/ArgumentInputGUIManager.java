@@ -3,8 +3,8 @@ package com.Tempce.tempceLib.gui.manager.handlers;
 import com.Tempce.tempceLib.command.data.ArgumentData;
 import com.Tempce.tempceLib.command.data.ArgumentType;
 import com.Tempce.tempceLib.gui.data.GUIItemData;
+import com.Tempce.tempceLib.gui.data.MaterialCategory;
 import com.Tempce.tempceLib.gui.manager.GUIManager;
-import com.Tempce.tempceLib.gui.manager.handlers.CommandGUIManager;
 import com.Tempce.tempceLib.gui.manager.util.GUIItemCreator;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -98,15 +98,6 @@ public class ArgumentInputGUIManager {
             return;
         }
         
-        // デバッグ情報を送信
-        player.sendMessage(ChatColor.GREEN + "[DEBUG] コマンド: " + commandName + " " + subCommandPath);
-        player.sendMessage(ChatColor.GREEN + "[DEBUG] 引数の数: " + arguments.size());
-        for (int i = 0; i < arguments.size(); i++) {
-            ArgumentData arg = arguments.get(i);
-            player.sendMessage(ChatColor.GREEN + "[DEBUG] 引数 " + (i + 1) + ": " + arg.getName() + 
-                              " (タイプ: " + arg.getType().getDisplayName() + ")");
-        }
-        
         ArgumentInputSession session = new ArgumentInputSession(commandName, subCommandPath, arguments);
         showArgumentInputGUI(player, session, paginationCreator);
     }
@@ -126,40 +117,21 @@ public class ArgumentInputGUIManager {
         
         ArgumentData currentArg = session.getCurrentArgument();
         
-        // デバッグ情報を送信
-        player.sendMessage(ChatColor.GRAY + "[DEBUG] 引数 " + (session.getCurrentArgumentIndex() + 1) + "/" + 
-                          session.getArgumentsTemplate().size() + ": " + currentArg.getName() + 
-                          " (タイプ: " + currentArg.getType().getDisplayName() + ")");
-        
         switch (currentArg.getType()) {
-            case PLAYER:
-                showPlayerSelectionGUI(player, session, paginationCreator);
+            case ONLINE_PLAYER:
+                showPlayerSelectionGUI(player, session, paginationCreator, true); // オンラインのみ
+                break;
+            case ALL_PLAYER:
+                showPlayerSelectionGUI(player, session, paginationCreator, false); // オフライン含む
                 break;
             case WORLD:
                 showWorldSelectionGUI(player, session, paginationCreator);
                 break;
-            case ITEM_ID:
+            case ITEM_ID, ITEM_ID_TOOL, ITEM_ID_BLOCK, ITEM_ID_NATURE_BLOCK, ITEM_ID_WEAPON_ARMOR, ITEM_ID_DECORATION,
+                 ITEM_ID_FOOD:
                 showItemSelectionGUI(player, session, paginationCreator);
                 break;
-            case ITEM_ID_TOOL:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case ITEM_ID_BLOCK:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case ITEM_ID_NATURE_BLOCK:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case ITEM_ID_WEAPON_ARMOR:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case ITEM_ID_FOOD:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case ITEM_ID_DECORATION:
-                showItemSelectionGUI(player, session, paginationCreator);
-                break;
-            case BOOLEAN:
+          case BOOLEAN:
                 showBooleanSelectionGUI(player, session, paginationCreator);
                 break;
             case ENCHANTMENT:
@@ -189,37 +161,27 @@ public class ArgumentInputGUIManager {
      * プレイヤー選択GUI
      */
     private void showPlayerSelectionGUI(Player player, ArgumentInputSession session, 
-                                      Consumer<CommandGUIManager.CommandGUIData> paginationCreator) {
+                                      Consumer<CommandGUIManager.CommandGUIData> paginationCreator, boolean onlineOnly) {
         ArgumentData arg = session.getCurrentArgument();
-        List<GUIItemData> items = new ArrayList<>();
         
-        int slot = 0;
-        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            // ループ変数を最終変数にキャプチャ
-            final String playerName = onlinePlayer.getName();
-            
-            ItemStack playerItem = GUIItemCreator.createItem(Material.PLAYER_HEAD, 
-                    ChatColor.GREEN + playerName,
-                    Arrays.asList(
-                            ChatColor.GRAY + "引数: " + ChatColor.WHITE + arg.getName(),
-                            ChatColor.GRAY + "説明: " + ChatColor.WHITE + arg.getDescription(),
-                            "",
-                            ChatColor.YELLOW + "クリックして選択"
-                    ));
-            
-            items.add(new GUIItemData(playerItem, slot++, (guiItemData) -> {
-                session.addArgument(playerName);
-                showArgumentInputGUI(player, session, paginationCreator);
-            }));
-            
-            if (slot >= 45) break; // 最大5行分
+        if (onlineOnly) {
+            // オンラインプレイヤーのみ - 既存のAPIを使用
+            GUIManager.getInstance().createPlayerSelectionGUI(player, 
+                    ChatColor.BLUE + "オンラインプレイヤーを選択: " + arg.getName(),
+                    (selectedPlayer) -> {
+                        session.addArgument(selectedPlayer.getName());
+                        showArgumentInputGUI(player, session, paginationCreator);
+                    });
+        } else {
+            // 全プレイヤー（オフライン含む） - 新しいAPIを使用
+            GUIManager.getInstance().createPlayerNameSelectionGUI(player, 
+                    ChatColor.BLUE + "プレイヤーを選択: " + arg.getName() + " (オフライン含む)",
+                    true, // includeOffline = true
+                    (selectedPlayerName) -> {
+                        session.addArgument(selectedPlayerName);
+                        showArgumentInputGUI(player, session, paginationCreator);
+                    });
         }
-        
-        addNavigationItems(items, session, paginationCreator, player);
-        
-        paginationCreator.accept(new CommandGUIManager.CommandGUIData(
-                ChatColor.BLUE + "プレイヤーを選択: " + arg.getName(), 
-                items, 54, null, CommandGUIManager.CommandGUIType.SUBCOMMAND_MENU));
     }
     
     /**
@@ -267,72 +229,44 @@ public class ArgumentInputGUIManager {
     }
     
     /**
-     * アイテム選択GUI
+     * アイテム選択GUI（APIを使用版）
      */
     private void showItemSelectionGUI(Player player, ArgumentInputSession session, 
                                     Consumer<CommandGUIManager.CommandGUIData> paginationCreator) {
         ArgumentData arg = session.getCurrentArgument();
         
-        // アイテムタイプ別にフィルタリング
-        Material[] itemsToShow = getItemsByType(arg.getType());
+        // 引数タイプからMaterialCategoryに変換
+        MaterialCategory category = convertArgumentTypeToCategory(arg.getType());
         
-        // 全アイテムリストを作成（ページネーション対応）
-        List<GUIItemData> allItems = new ArrayList<>();
-        
-        for (int i = 0; i < itemsToShow.length; i++) {
-            // ループ変数を最終変数にキャプチャ
-            final Material material = itemsToShow[i];
-            final String materialName = material.name();
-            
-            // ブロック系でバケツアイテムの場合は液体ブロック名を使用
-            final String outputName;
-            if (arg.getType() != ArgumentType.ITEM_ID_BLOCK && material == Material.WATER_BUCKET) {
-                outputName = "WATER";
-            } else if (arg.getType() != ArgumentType.ITEM_ID_BLOCK && material == Material.LAVA_BUCKET) {
-                outputName = "LAVA";
-            } else {
-                outputName = materialName;
-            }
-            
-            // 表示名は実際の液体ブロック名を使用
-            String displayName = outputName;
-            if (arg.getType() == ArgumentType.ITEM_ID_BLOCK && material == Material.WATER_BUCKET) {
-                displayName = "WATER (水ブロック)";
-            } else if (arg.getType() == ArgumentType.ITEM_ID_BLOCK && material == Material.LAVA_BUCKET) {
-                displayName = "LAVA (溶岩ブロック)";
-            }
-            
-            ItemStack displayItem = GUIItemCreator.createItem(material, 
-                    ChatColor.GREEN + displayName,
-                    Arrays.asList(
-                            ChatColor.GRAY + "ID: " + ChatColor.WHITE + outputName,
-                            ChatColor.GRAY + "タイプ: " + ChatColor.WHITE + arg.getType().getDisplayName(),
-                            ChatColor.GRAY + "引数: " + ChatColor.WHITE + arg.getName(),
-                            ChatColor.GRAY + "説明: " + ChatColor.WHITE + arg.getDescription(),
-                            "",
-                            ChatColor.YELLOW + "クリックして選択"
-                    ));
-            
-            allItems.add(new GUIItemData(displayItem, i, (guiItemData) -> {
-                session.addArgument(outputName);
-                showArgumentInputGUI(player, session, paginationCreator);
-            }));
-        }
-        
-        // ナビゲーションアイテムを追加
-        addNavigationItems(allItems, session, paginationCreator, player);
-        
-        // ページネーション対応のGUIデータを作成
-        paginationCreator.accept(new CommandGUIManager.CommandGUIData(
-                ChatColor.BLUE + arg.getType().getDisplayName() + "を選択: " + arg.getName() + 
-                " (" + itemsToShow.length + "個のアイテム)", 
-                allItems, 54, null, CommandGUIManager.CommandGUIType.SUBCOMMAND_MENU));
+        // APIのマテリアル選択GUIを使用
+        GUIManager.getInstance().createMaterialSelectionGUI(player, 
+                ChatColor.BLUE + category.getDisplayName() + "を選択: " + arg.getName(),
+                category,
+                (selectedMaterial) -> {
+                    session.addArgument(selectedMaterial.name());
+                    showArgumentInputGUI(player, session, paginationCreator);
+                });
     }
     
     /**
-     * アイテムタイプ別のマテリアル配列を取得
+     * ArgumentTypeをMaterialCategoryに変換
      */
-    private Material[] getItemsByType(ArgumentType type) {
+    private MaterialCategory convertArgumentTypeToCategory(ArgumentType type) {
+        return switch (type) {
+            case ITEM_ID_TOOL -> MaterialCategory.TOOLS;
+            case ITEM_ID_BLOCK -> MaterialCategory.BLOCKS;
+            case ITEM_ID_NATURE_BLOCK -> MaterialCategory.NATURE_BLOCKS;
+            case ITEM_ID_WEAPON_ARMOR -> MaterialCategory.WEAPONS_ARMOR;
+            case ITEM_ID_FOOD -> MaterialCategory.FOOD;
+            case ITEM_ID_DECORATION -> MaterialCategory.DECORATION;
+            default -> MaterialCategory.ALL;
+        };
+    }
+    
+    /**
+     * アイテムタイプ別のマテリアル配列を取得（パブリックメソッド）
+     */
+    public Material[] getItemsByType(ArgumentType type) {
         return switch (type) {
             case ITEM_ID_TOOL -> new Material[]{
                 // ツール類 - 全ツール
@@ -641,7 +575,7 @@ public class ArgumentInputGUIManager {
     }
     
     /**
-     * 整数選択GUI（既存のGUIManagerを使用）
+     * 整数選択GUI（APIを使用）
      */
     private void showIntegerSelectionUsingGUIManager(Player player, ArgumentInputSession session, 
                                                    Consumer<CommandGUIManager.CommandGUIData> paginationCreator) {
@@ -652,6 +586,7 @@ public class ArgumentInputGUIManager {
         int max = (int) (arg.getMax() != Double.POSITIVE_INFINITY ? arg.getMax() : 1000);
         int defaultValue = Math.max(min, Math.min(max, 0));
         
+        // APIの数値選択GUIを使用
         GUIManager.getInstance().createNumberSelectionGUI(player, 
                 "整数を選択: " + arg.getName(), 
                 min, max, defaultValue, 
@@ -662,7 +597,7 @@ public class ArgumentInputGUIManager {
     }
     
     /**
-     * 小数選択GUI（既存のGUIManagerを使用）
+     * 小数選択GUI（APIを使用）
      */
     private void showDoubleSelectionUsingGUIManager(Player player, ArgumentInputSession session, 
                                                   Consumer<CommandGUIManager.CommandGUIData> paginationCreator) {
@@ -673,6 +608,7 @@ public class ArgumentInputGUIManager {
         int max = (int) (arg.getMax() != Double.POSITIVE_INFINITY ? arg.getMax() : 100);
         int defaultValue = Math.max(min, Math.min(max, 0));
         
+        // APIの数値選択GUIを使用
         GUIManager.getInstance().createNumberSelectionGUI(player, 
                 "数値を選択: " + arg.getName() + " (小数入力も可能)", 
                 min, max, defaultValue, 
@@ -731,9 +667,7 @@ public class ArgumentInputGUIManager {
                             ChatColor.GRAY + "相対座標（~）も使用できます"
                     ));
             
-            items.add(new GUIItemData(customItem, slot, (guiItemData) -> {
-                showTextInputGUI(player, session, paginationCreator);
-            }));
+            items.add(new GUIItemData(customItem, slot, (guiItemData) -> showTextInputGUI(player, session, paginationCreator)));
         }
         
         addNavigationItems(items, session, paginationCreator, player);
@@ -831,6 +765,9 @@ public class ArgumentInputGUIManager {
             player.sendMessage(ChatColor.RED + "コマンド実行をキャンセルしました。");
         }));
     }
+    
+    /**
+     * ページネーション用のボタンを追加
     
     /**
      * 座標候補を生成

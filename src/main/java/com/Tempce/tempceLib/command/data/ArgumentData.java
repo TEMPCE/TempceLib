@@ -73,9 +73,9 @@ public class ArgumentData {
      * 引数が選択式かどうかを判定
      */
     public boolean hasSelections() {
-        return type == ArgumentType.PLAYER || type == ArgumentType.WORLD ||
-               type == ArgumentType.ITEM_ID || type == ArgumentType.ENCHANTMENT ||
-               type == ArgumentType.POTION_EFFECT || type == ArgumentType.BOOLEAN ||
-               !suggestions.isEmpty();
+        return type == ArgumentType.ONLINE_PLAYER || type == ArgumentType.ALL_PLAYER || 
+               type == ArgumentType.WORLD || type == ArgumentType.ITEM_ID || 
+               type == ArgumentType.ENCHANTMENT || type == ArgumentType.POTION_EFFECT || 
+               type == ArgumentType.BOOLEAN || !suggestions.isEmpty();
     }
 }

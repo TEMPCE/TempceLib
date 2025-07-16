@@ -26,8 +26,8 @@ public class GUIEventHandler implements Listener {
     private boolean debugMode = false;
     
     // 権限チェック関数とデータクリーンアップ関数
-    private BiFunction<Player, String, Boolean> permissionChecker;
-    private Runnable dataCleanupCallback;
+    private final BiFunction<Player, String, Boolean> permissionChecker;
+    private final Runnable dataCleanupCallback;
     
     /**
      * コンストラクタ

@@ -16,6 +16,14 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub simply-app Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/TEMPCE/TempceLib</url>
+        </repository>
+    </distributionManagement>
+
     <build>
         <defaultGoal>clean package</defaultGoal>
         <plugins>

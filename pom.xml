@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.Tempce</groupId>
-    <artifactId>TempceLib</artifactId>
+    <artifactId>tempcelib</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
@@ -19,7 +19,7 @@
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub simply-app Apache Maven Packages</name>
+            <name>GitHub TEMPCE Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/TEMPCE/TempceLib</url>
         </repository>
     </distributionManagement>

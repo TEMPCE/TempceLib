@@ -16,10 +16,13 @@ public class SubCommandData {
     private final boolean playerOnly;
     private final Method method;
     private final Object instance;
+    private final List<ArgumentData> arguments;
+    private String parentCommandName; // 親コマンド名
     
     public SubCommandData(String path, String permission, List<String> aliases, 
                          int timeout, String description, String usage, 
-                         boolean playerOnly, Method method, Object instance) {
+                         boolean playerOnly, Method method, Object instance, 
+                         List<ArgumentData> arguments) {
         this.path = path;
         this.permission = permission;
         this.aliases = aliases;
@@ -29,6 +32,7 @@ public class SubCommandData {
         this.playerOnly = playerOnly;
         this.method = method;
         this.instance = instance;
+        this.arguments = arguments;
     }
     
     public String getPath() {
@@ -79,5 +83,24 @@ public class SubCommandData {
     
     public Object getInstance() {
         return instance;
+    }
+    
+    public List<ArgumentData> getArguments() {
+        return arguments;
+    }
+    
+    /**
+     * 引数が定義されているかどうかを判定
+     */
+    public boolean hasArguments() {
+        return arguments != null && !arguments.isEmpty();
+    }
+    
+    public String getParentCommandName() {
+        return parentCommandName;
+    }
+    
+    public void setParentCommandName(String parentCommandName) {
+        this.parentCommandName = parentCommandName;
     }
 }

@@ -2,6 +2,7 @@ package com.Tempce.tempceLib.api;
 
 import com.Tempce.tempceLib.gui.data.GUIMenuData;
 import com.Tempce.tempceLib.gui.data.GUIItemData;
+import com.Tempce.tempceLib.gui.data.MaterialCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -108,6 +109,15 @@ public interface GUIAPI {
      * @param onItemClick アイテムクリック時のコールバック
      */
     void createPaginatedGUI(Player player, String title, List<GUIItemData> items, int itemsPerPage, Consumer<GUIItemData> onItemClick);
+    
+    /**
+     * マテリアル選択GUIを作成
+     * @param player 対象プレイヤー
+     * @param title GUIタイトル
+     * @param category マテリアルカテゴリ
+     * @param onSelect マテリアル選択時のコールバック
+     */
+    void createMaterialSelectionGUI(Player player, String title, MaterialCategory category, Consumer<org.bukkit.Material> onSelect);
     
     /**
      * プレイヤーが特定のGUIにアクセス可能かチェック

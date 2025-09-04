@@ -1,9 +1,12 @@
 package com.Tempce.tempceLib.command.examples;
 
+import com.Tempce.tempceLib.TempceLib;
 import com.Tempce.tempceLib.command.annotations.Command;
 import com.Tempce.tempceLib.command.annotations.SubCommand;
+import com.Tempce.tempceLib.gui.manager.GUIManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 /**
  * TempceLibのメインコマンドのサンプル実装
@@ -61,5 +64,22 @@ public class TempceLibCommand {
             }
         }
         sender.sendMessage(ChatColor.GOLD + "===============================");
+    }
+    
+    @SubCommand(
+        path = "gui",
+        description = "コマンド自動GUI化メニューを開く",
+        usage = "gui",
+        playerOnly = true
+    )
+    public void gui(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return;
+        }
+        
+        Player player = (Player) sender;
+        GUIManager.getInstance().openCommandAutoGUI(player);
+        player.sendMessage(ChatColor.GREEN + "コマンド自動GUI化メニューを開きました！");
     }
 }

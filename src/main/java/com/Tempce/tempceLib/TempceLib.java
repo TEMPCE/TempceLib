@@ -2,7 +2,6 @@ package com.Tempce.tempceLib;
 
 import com.Tempce.tempceLib.command.examples.TempceLibCommand;
 import com.Tempce.tempceLib.command.manager.CommandManager;
-import com.Tempce.tempceLib.gui.examples.TempceGUICommand;
 import com.Tempce.tempceLib.gui.manager.GUIManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -44,7 +43,6 @@ public final class TempceLib extends JavaPlugin {
     
     // plugin.ymlで定義されたコマンドにエグゼキューターとタブコンプリーターを設定
     commandManager.registerCommand(TempceLibCommand.class);
-    commandManager.registerCommand(TempceGUICommand.class);
     
     getLogger().info("コマンドシステムを初期化しました (登録コマンド: " + 
         commandManager.getCommandCount() + "個, サブコマンド: " + 

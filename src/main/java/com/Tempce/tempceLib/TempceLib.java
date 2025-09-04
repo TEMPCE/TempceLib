@@ -1,7 +1,9 @@
 package com.Tempce.tempceLib;
 
+import com.Tempce.tempceLib.api.DatabaseAPI;
 import com.Tempce.tempceLib.command.examples.TempceLibCommand;
 import com.Tempce.tempceLib.command.manager.CommandManager;
+import com.Tempce.tempceLib.database.manager.DatabaseManager;
 import com.Tempce.tempceLib.gui.manager.GUIManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,11 +12,15 @@ public final class TempceLib extends JavaPlugin {
   private static TempceLib instance;
   private CommandManager commandManager;
   private GUIManager guiManager;
+  private DatabaseManager databaseManager;
 
   @Override
   public void onEnable() {
     // Plugin startup logic
     instance = this;
+    
+    // データベースシステムの初期化
+    initializeDatabaseSystem();
     
     // コマンドシステムの初期化
     initializeCommandSystem();
@@ -28,11 +34,36 @@ public final class TempceLib extends JavaPlugin {
   @Override
   public void onDisable() {
     // Plugin shutdown logic
+    
+    // データベースシステムのシャットダウン
+    if (databaseManager != null) {
+      databaseManager.shutdown();
+    }
+    
     getLogger().info("TempceLibが無効化されました！");
   }
 
   public static TempceLib getInstance() {
     return instance;
+  }
+  
+  /**
+   * データベースシステムを初期化する
+   */
+  private void initializeDatabaseSystem() {
+    try {
+      databaseManager = new DatabaseManager(this);
+      databaseManager.initialize();
+      
+      // DatabaseAPIを初期化
+      DatabaseAPI.initialize(this);
+      
+      getLogger().info("データベースシステムを初期化しました (" + 
+          databaseManager.getConfig().getType().getName() + ")");
+    } catch (Exception e) {
+      getLogger().severe("データベースシステムの初期化に失敗しました: " + e.getMessage());
+      e.printStackTrace();
+    }
   }
   
   /**
@@ -73,5 +104,13 @@ public final class TempceLib extends JavaPlugin {
    */
   public GUIManager getGuiManager() {
     return guiManager;
+  }
+  
+  /**
+   * データベースマネージャーを取得する
+   * @return データベースマネージャー
+   */
+  public DatabaseManager getDatabaseManager() {
+    return databaseManager;
   }
 }

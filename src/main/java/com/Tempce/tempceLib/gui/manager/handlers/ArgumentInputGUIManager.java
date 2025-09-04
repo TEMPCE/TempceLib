@@ -511,7 +511,8 @@ public class ArgumentInputGUIManager {
         List<GUIItemData> items = new ArrayList<>();
         
         int slot = 0;
-        for (Enchantment enchantment : Enchantment.values()) {
+        // Enchantment.values()は非推奨のため、Registry APIを使用
+        for (Enchantment enchantment : org.bukkit.Registry.ENCHANTMENT) {
             ItemStack enchantItem = GUIItemCreator.createItem(Material.ENCHANTED_BOOK, 
                     ChatColor.LIGHT_PURPLE + enchantment.getKey().getKey(),
                     Arrays.asList(
@@ -546,12 +547,13 @@ public class ArgumentInputGUIManager {
         List<GUIItemData> items = new ArrayList<>();
         
         int slot = 0;
-        for (PotionEffectType effectType : PotionEffectType.values()) {
+        // PotionEffectType.values()は非推奨のため、Registry APIを使用
+        for (PotionEffectType effectType : org.bukkit.Registry.EFFECT) {
             if (effectType != null) {
                 ItemStack potionItem = GUIItemCreator.createItem(Material.POTION, 
-                        ChatColor.AQUA + effectType.getName(),
+                        ChatColor.AQUA + effectType.getKey().getKey(),
                         Arrays.asList(
-                                ChatColor.GRAY + "ID: " + ChatColor.WHITE + effectType.getName(),
+                                ChatColor.GRAY + "ID: " + ChatColor.WHITE + effectType.getKey().getKey(),
                                 ChatColor.GRAY + "引数: " + ChatColor.WHITE + arg.getName(),
                                 ChatColor.GRAY + "説明: " + ChatColor.WHITE + arg.getDescription(),
                                 "",
@@ -559,7 +561,7 @@ public class ArgumentInputGUIManager {
                         ));
                 
                 items.add(new GUIItemData(potionItem, slot++, (guiItemData) -> {
-                    session.addArgument(effectType.getName());
+                    session.addArgument(effectType.getKey().getKey());
                     showArgumentInputGUI(player, session, paginationCreator);
                 }));
                 

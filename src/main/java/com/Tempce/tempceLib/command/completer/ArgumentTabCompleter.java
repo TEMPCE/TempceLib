@@ -156,7 +156,8 @@ public class ArgumentTabCompleter {
     private static List<String> getEnchantmentCompletions(String input) {
         List<String> enchantments = new ArrayList<>();
         
-        for (Enchantment enchantment : Enchantment.values()) {
+        // Enchantment.values()は非推奨のため、Registry APIを使用
+        for (Enchantment enchantment : org.bukkit.Registry.ENCHANTMENT) {
             String key = enchantment.getKey().getKey();
             if (key.toLowerCase().startsWith(input.toLowerCase())) {
                 enchantments.add(key);
@@ -172,9 +173,10 @@ public class ArgumentTabCompleter {
     private static List<String> getPotionEffectCompletions(String input) {
         List<String> effects = new ArrayList<>();
         
-        for (PotionEffectType effectType : PotionEffectType.values()) {
+        // PotionEffectType.values()は非推奨のため、Registry APIを使用
+        for (PotionEffectType effectType : org.bukkit.Registry.EFFECT) {
             if (effectType != null) {
-                String name = effectType.getName().toLowerCase();
+                String name = effectType.getKey().getKey().toLowerCase();
                 if (name.startsWith(input.toLowerCase())) {
                     effects.add(name);
                 }
@@ -507,7 +509,10 @@ public class ArgumentTabCompleter {
                 Material.BLUE_CANDLE, Material.BROWN_CANDLE, Material.GREEN_CANDLE, Material.RED_CANDLE, Material.BLACK_CANDLE
             };
             
-            default -> Material.values(); // 全てのMaterialを返す
+            default -> {
+                // Material.values()が非推奨の場合に備えて、全てのMaterialを配列で返す
+                yield Material.values(); // 全てのMaterialを返す
+            }
         };
     }
 }

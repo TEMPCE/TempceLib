@@ -1,0 +1,41 @@
+# TempceLib Database Configuration
+# データベース統合機能の設定ファイル
+
+database:
+  # データベース種別 (mysql, sqlite, postgresql)
+  type: "sqlite"
+  
+  # MySQL/PostgreSQL用設定
+  host: "localhost"
+  port: 3306
+  name: "tempcelib"
+  username: "root"
+  password: ""
+  
+  # SQLite用設定
+  file: "plugins/TempceLib/database.db"
+  
+  # テーブルプリフィックス (他プラグインとの競合を避けるため)
+  table-prefix: "tempce_"
+  
+  # SSL使用設定
+  use-ssl: false
+  
+  # コネクションプール設定
+  pool:
+    max-size: 10
+    min-size: 1
+    connection-timeout: 30000  # ミリ秒
+    idle-timeout: 600000       # ミリ秒 (10分)
+    max-lifetime: 1800000      # ミリ秒 (30分)
+
+# パフォーマンス設定
+performance:
+  # クエリキャッシュの有効化
+  enable-query-cache: true
+  
+  # 自動最適化の実行間隔 (分)
+  auto-optimize-interval: 60
+  
+  # スロークエリのしきい値 (ミリ秒)
+  slow-query-threshold: 5000

@@ -43,7 +43,7 @@ public class CommandGUIManager {
         if (permission == null || permission.isEmpty()) {
             return false;
         }
-        return !player.hasPermission(permission);
+        return player.hasPermission(permission);
     }
     
     /**

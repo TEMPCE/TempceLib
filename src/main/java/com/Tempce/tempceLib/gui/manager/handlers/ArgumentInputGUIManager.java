@@ -767,9 +767,6 @@ public class ArgumentInputGUIManager {
     }
     
     /**
-     * ページネーション用のボタンを追加
-    
-    /**
      * 座標候補を生成
      */
     private List<String> generateCoordinateCandidates(ArgumentData arg, Player player) {
